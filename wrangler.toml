@@ -1,0 +1,8 @@
+# 纯静态站点：Worker 只托管 public/ 下的文件，没有服务端代码
+name = "muddy-dust-4d36"
+compatibility_date = "2026-10-01"
+workers_dev = true
+routes = [{ pattern = "sw.yink.shop", custom_domain = true }]
+
+[assets]
+directory = "./public"

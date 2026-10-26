@@ -1,0 +1,15 @@
+const fs=require('fs');
+const [orig,out]=process.argv.slice(2).map(f=>fs.readFileSync(f,'utf8'));
+const js=orig.match(/<script>([\s\S]*?)<\/script>/)[1].split('\n');
+const D=JSON.parse(js[1].slice('const DATA = '.length,-1)), L=JSON.parse(js[2].slice('const LAND = '.length,-1));
+const blocks={}; for (const m of out.matchAll(/<script type="application\/json" id="(\w+)">([\s\S]*?)<\/script>/g)) blocks[m[1]]=m[2];
+global.document={getElementById:id=>({textContent:blocks[id]})};
+const code=out.match(/<script>([\s\S]*?)<\/script>/)[1];
+const decode=code.slice(code.indexOf('const DATA'), code.indexOf('const $ ='));
+const {DATA,LAND}=new Function(decode+';return {DATA,LAND};')();
+let bad=0; const DROP=['ant','afrq','req','old'];
+D.forEach((r,i)=>{ for (const k in r){ if (DROP.includes(k)) continue; if (r[k]!==DATA[i][k]) { if(bad++<5) console.log('diff',i,k,r[k],DATA[i][k]); } } });
+console.log('records',D.length,DATA.length,'field mismatches',bad);
+let maxd=0; L.features.forEach((f,i)=>{const a=JSON.stringify(f.geometry.coordinates).match(/-?[\d.]+/g), b=JSON.stringify(LAND.features[i].geometry.coordinates).match(/-?[\d.]+/g); if(a.length!==b.length) console.log('len diff'); a.forEach((x,j)=>maxd=Math.max(maxd,Math.abs(x-b[j])));});
+console.log('land features',L.features.length,LAND.features.length,'max coord change (deg)',maxd.toFixed(4));
+new Function(code.replace(decode,'')); console.log('rest of script parses OK');
