@@ -1,6 +1,6 @@
 # hfFreq — HF 短波频率查询
 
-线上地址：**https://sw.yink.shop**（备用：https://muddy-dust-4d36.yangkang5303.workers.dev）
+线上地址：**https://sw.yink.shop**（备用：https://muddy-dust-4d36.yangkang5303.workers.dev） · 仓库：https://github.com/yangkang5303/hfFreq
 
 HFCC B26 季全球短波广播排程查询：按 UTC 时间、语言、电台筛选当前可收听的频率，并在世界地图上显示各发射台的方位角与功率。
 
