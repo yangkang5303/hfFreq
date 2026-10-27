@@ -25,11 +25,14 @@
   .headbtns{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
   #collapsebtn{width:34px;height:34px;padding:0;font-size:13px;line-height:1}
   /* 收起面板时只保留中/英文快捷按钮 */
-  body.top-hidden header .controls > :not(.langtoggles),
+  body.top-hidden header .controls > :not(.langtoggles):not(#nocn),
   body.top-hidden .tabs{display:none!important}
   /* 地图视图不显示搜索框和语言下拉（地图视图下也不按它们过滤） */
   body.view-map #q,
   body.view-map #langsel{display:none!important}
+  /* “只听海外”只在地图视图显示 */
+  body:not(.view-map) #nocn{display:none!important}
+  #nocn{white-space:nowrap;font-size:13px}
   body.top-hidden header .controls{margin-top:8px}
   input:disabled{opacity:.5;cursor:not-allowed}
   .controls{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;align-items:center}
@@ -224,6 +227,7 @@
       <button data-lang="zh" title="只看中文">中文</button>
       <button data-lang="en" title="只看英文">English</button>
     </div>
+    <button id="nocn" title="隐藏发射国家为 China 的电台（仅地图视图）">只听海外</button>
     <select id="langsel"><option value="">全部语言</option></select>
   </div>
 </header>
@@ -390,7 +394,9 @@ function currentFilters(){
   const n = nowUTC();
   const dow = n.dow;
   const lang = mapActive ? '' : langSel.value;
+  const noCN = mapActive && excludeChina;   // “只听海外”只在地图视图生效
   let rows = DATA.filter(r=>{
+    if (noCN && r.admname === 'China') return false;
     if (liveOnly && !isOnAir(r, curMin, dow)) return false;
     if (!langQuickMatch(r)) return false;
     if (lang && (r.langname||r.lang) !== lang) return false;
@@ -488,6 +494,15 @@ langToggleBtns.forEach(b => b.addEventListener('click', () => {
   syncLangButtons();
   render();
 }));
+
+// “只听海外”：隐藏发射国家为 China 的电台（数据中这些电台全部从中国境内台站发射，含 Taipei 台站）
+let excludeChina = false;
+const noCnBtn = document.getElementById('nocn');
+noCnBtn.addEventListener('click', () => {
+  excludeChina = !excludeChina;
+  noCnBtn.classList.toggle('on', excludeChina);
+  render();
+});
 
 // 语言下拉（选择后清除快捷按钮）
 langSel.addEventListener('change', () => {
@@ -1161,6 +1176,8 @@ const MAP = (() => {
     { min: 14, n: 1, name: '微弱', color: '#8b98a5', line: '#5c6773' },
   ];
   const PROBE_MAX = 60;   // 列表最多显示条数
+  // 接收点在天线主瓣 ±45° 内时，加大功率和距离两项的权重（以 100 kW、3000 km 为基准放大差异）
+  const BEAM_HALF = 45, BEAM_WEIGHT = 1.5, P_REF = 100, D_REF = 3000;
 
   // 大圆距离（km）、从发射台出发的方位角、路径中点
   function pathGeom(lat1, lon1, lat2, lon2){
@@ -1181,11 +1198,12 @@ const MAP = (() => {
     const g = pathGeom(r.lat, r.lon, lat, lon);
     const d = Math.max(g.dist, 50);
     const az = parseInt(r.az, 10) || 0;
-    let gain;
-    if (az === 0) gain = 2;   // 全向
+    let gain, w = 1;   // w：功率/距离项的权重
+    if (az === 0) gain = 2;   // 全向（无主瓣方向，不加权）
     else {
       const off = Math.abs(((g.brg - az) % 360 + 540) % 360 - 180);   // 偏离天线主瓣的角度 0..180
       gain = Math.max(-8, 15 - 12 * (off / 30) ** 2);
+      if (off <= BEAM_HALF) w = BEAM_WEIGHT;
     }
     const fMHz = r.f / 1000;
     const hops = Math.max(1, Math.ceil(d / 3500));
@@ -1195,7 +1213,10 @@ const MAP = (() => {
     const absorb = Math.min(60, hops * 30 * cosz * (5 / fMHz) ** 2);
     const muf = 10 + 18 * cosz;   // 夜间约 10 MHz，正午约 28 MHz
     const mufLoss = fMHz > muf ? Math.min(40, 30 * (fMHz / muf - 1)) : 0;
-    const E = 104.8 + 10*Math.log10(p) + gain - 20*Math.log10(d) - 10 - hops*6 - absorb - mufLoss;
+    // w = 1 时与原式 104.8 + 10·log10(p) − 20·log10(d) 完全相同；w > 1 放大相对于基准的差异
+    const powTerm  = 10*Math.log10(P_REF) + w * 10*Math.log10(p / P_REF);
+    const distTerm = 20*Math.log10(D_REF) + w * 20*Math.log10(d / D_REF);
+    const E = 104.8 + powTerm + gain - distTerm - 10 - hops*6 - absorb - mufLoss;
     return { E, dist: g.dist };
   }
 
