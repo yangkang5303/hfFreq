@@ -26,8 +26,10 @@
   #collapsebtn{width:34px;height:34px;padding:0;font-size:13px;line-height:1}
   /* 收起面板时只保留中/英文快捷按钮 */
   body.top-hidden header .controls > :not(.langtoggles),
-  body.top-hidden .tabs,
-  body.top-hidden .chips{display:none!important}
+  body.top-hidden .tabs{display:none!important}
+  /* 地图视图不显示搜索框和语言下拉（地图视图下也不按它们过滤） */
+  body.view-map #q,
+  body.view-map #langsel{display:none!important}
   body.top-hidden header .controls{margin-top:8px}
   input:disabled{opacity:.5;cursor:not-allowed}
   .controls{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;align-items:center}
@@ -72,10 +74,6 @@
   .footlinks{display:flex;gap:14px;flex-wrap:wrap}
   footer a{color:var(--accent2);text-decoration:none}
   footer a:hover{text-decoration:underline}
-  .chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
-  .chip{background:var(--panel);border:1px solid var(--border);border-radius:999px;
-    padding:3px 11px;font-size:12px;color:var(--muted)}
-  .chip b{color:var(--accent)}
   .bandgroup{margin-bottom:22px}
   .bandgroup h2{font-size:14px;margin:0 0 8px;color:var(--accent2);font-weight:600;
     display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;
@@ -110,7 +108,7 @@
   .nowtog input{accent-color:var(--accent)}
 
   /* ---- view tabs ---- */
-  .tabs{display:flex;gap:6px;margin:0 0 12px}
+  .tabs{display:flex;gap:6px;margin-top:10px}
   .tabs button{background:var(--panel);border:1px solid var(--border);color:var(--muted);
     padding:6px 16px;border-radius:7px;font-size:13px}
   .tabs button.active{background:var(--accent2);border-color:var(--accent2);color:#04121f;font-weight:600}
@@ -204,6 +202,10 @@
       <button id="collapsebtn" title="隐藏/显示上方面板（全屏看地图）">▾</button>
     </div>
   </div>
+  <div class="tabs">
+    <button id="tabList" class="active">📋 频率列表</button>
+    <button id="tabMap">🗺️ 世界地图</button>
+  </div>
   <div class="controls">
     <input id="q" placeholder="搜索：频率 / 呼号 / 台站 / 语言 / 国家…">
     <div class="ctrl-grp">
@@ -227,12 +229,6 @@
 </header>
 
 <main>
-  <div class="tabs">
-    <button id="tabList" class="active">📋 频率列表</button>
-    <button id="tabMap">🗺️ 世界地图</button>
-  </div>
-
-  <div class="chips" id="chips"></div>
   <div id="content"></div>
 
   <div id="mapview" style="display:none">
@@ -277,7 +273,7 @@ const LAND = JSON.parse(document.getElementById('hfland').textContent);
 const $ = s => document.querySelector(s);
 const qEl = $('#q'), thEl = $('#th'), tmEl = $('#tm'), langSel = $('#langsel'),
       modeEl = $('#mode3'),
-      content = $('#content'), statsEl = $('#stats'), chipsEl = $('#chips');
+      content = $('#content'), statsEl = $('#stats');
 
 let liveOnly = false;
 // 时间筛选档位：'all' 全时段 / 'at' 指定时刻 / 'now' 当前可收听（跟随真实 UTC 时间，每 30 秒刷新）
@@ -388,11 +384,12 @@ for (const l of langs){
 
 // ---- render ----
 function currentFilters(){
-  const q = qEl.value.trim().toLowerCase();
+  // 搜索框和语言下拉只在列表视图显示，地图视图下不参与过滤（值保留，切回列表仍生效）
+  const q = mapActive ? '' : qEl.value.trim().toLowerCase();
   const curMin = (parseInt(thEl.value,10)||0)*60 + (parseInt(tmEl.value,10)||0);
   const n = nowUTC();
   const dow = n.dow;
-  const lang = langSel.value;
+  const lang = mapActive ? '' : langSel.value;
   let rows = DATA.filter(r=>{
     if (liveOnly && !isOnAir(r, curMin, dow)) return false;
     if (!langQuickMatch(r)) return false;
@@ -407,6 +404,7 @@ function currentFilters(){
 }
 
 let mapActive = false;
+const openBands = new Set();   // 用户展开的频段组；默认全部折叠，刷新列表时保持展开状态
 
 function render(){
   const {rows, curMin, dow} = currentFilters();
@@ -421,11 +419,6 @@ function render(){
     `<span>过滤结果 <b>${rows.length}</b> 条</span>` +
     `<span>当前时刻 (${toHM(curMin)} UTC) 可收听 <b>${onair}</b> 条 / <b>${onfreqs}</b> 个频率</span>` +
     `<span>数据库共 <b>${total}</b> 条 · <b>${freqs.size}</b> 个频率</span>`;
-
-  // band chips
-  const bands = {};
-  rows.forEach(r=>{ bands[bandOf(r.f)] = (bands[bandOf(r.f)]||0)+1; });
-  chipsEl.innerHTML = Object.entries(bands).sort().map(([b,c])=>`<span class="chip">${b} <b>${c}</b></span>`).join('');
 
   if (!rows.length){
     content.innerHTML = `<div class="empty"><div class="big">📡</div>没有匹配的频率。<br>试试清除筛选，或换个关键词/时间。</div>`;
@@ -442,7 +435,8 @@ function render(){
 
   let html='';
   for (const [band, list] of Object.entries(groups)){
-    html += `<div class="bandgroup" data-open="1"><h2 class="ghead" title="点击折叠/展开"><span class="chev">▾</span>${band} <span class="cnt">${list.length} 条</span></h2>`;
+    const open = openBands.has(band);
+    html += `<div class="bandgroup${open ? '' : ' collapsed'}" data-band="${band}"><h2 class="ghead" title="点击折叠/展开"><span class="chev">${open ? '▾' : '▸'}</span>${band} <span class="cnt">${list.length} 条</span></h2>`;
     html += `<table><thead><tr>
       <th>频率</th><th>时间</th><th>语言</th><th>电台 / 机构</th>
       <th class="col-days">日</th><th class="col-pow">功率</th><th class="col-az">方位</th>
@@ -511,8 +505,8 @@ function showTab(map){
   mapActive = map;
   tabList.classList.toggle('active', !map);
   tabMap.classList.toggle('active', map);
+  document.body.classList.toggle('view-map', map);
   contentEl.style.display = map ? 'none' : '';
-  chipsEl.style.display = map ? 'none' : '';
   mapview.style.display = map ? '' : 'none';
   if (map) MAP.resize();
   render();
@@ -527,6 +521,7 @@ contentEl.addEventListener('click', e => {
   if (!h) return;
   const g = h.parentElement;
   const collapsed = g.classList.toggle('collapsed');
+  if (collapsed) openBands.delete(g.dataset.band); else openBands.add(g.dataset.band);
   const chev = h.querySelector('.chev');
   if (chev) chev.textContent = collapsed ? '▸' : '▾';
 });
