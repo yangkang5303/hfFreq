@@ -23,25 +23,19 @@
     border-radius:4px;padding:1px 6px;margin-left:8px;vertical-align:middle}
   .headtop{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
   .headbtns{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-  .rptlink{display:inline-flex;align-items:center;gap:5px;text-decoration:none;
-    background:var(--panel);border:1px solid var(--border);border-radius:7px;
-    padding:6px 11px;color:var(--text);font-size:12.5px;white-space:nowrap;transition:.15s}
-  .rptlink:hover{border-color:var(--accent2);color:var(--accent2)}
   #collapsebtn{width:34px;height:34px;padding:0;font-size:13px;line-height:1}
   /* 收起面板时只保留中/英文快捷按钮 */
   body.top-hidden header .controls > :not(.langtoggles),
   body.top-hidden .tabs,
   body.top-hidden .chips{display:none!important}
   body.top-hidden header .controls{margin-top:8px}
-  .nowchk{display:flex;align-items:center;gap:5px;color:var(--muted);font-size:12.5px;
-    cursor:pointer;user-select:none;white-space:nowrap}
-  .nowchk input{accent-color:var(--accent);width:15px;height:15px}
   input:disabled{opacity:.5;cursor:not-allowed}
   .controls{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;align-items:center}
   input,select,button{font:inherit;background:var(--panel);color:var(--text);
     border:1px solid var(--border);border-radius:7px;padding:7px 10px;outline:none}
   input:focus,select:focus{border-color:var(--accent2);box-shadow:0 0 0 2px rgba(88,166,255,.2)}
-  #q{flex:0 1 260px;min-width:0}
+  #q{flex:0 1 260px;min-width:0;background:#fff;color:#0f1419}
+  #q::placeholder{color:#8b98a5}
   .ctrl-grp{display:flex;align-items:center;gap:6px;background:var(--panel);
     border:1px solid var(--border);border-radius:7px;padding:4px 8px}
   .ctrl-grp label{color:var(--muted);font-size:12px;white-space:nowrap}
@@ -51,6 +45,18 @@
   button.primary{background:var(--accent);color:#06210f;border-color:var(--accent);font-weight:600}
   button.primary:hover{filter:brightness(1.1)}
   button.on{background:var(--accent2);color:#04121f;border-color:var(--accent2);font-weight:600}
+  /* 时间筛选三档开关：左 全时段 / 中 指定时刻 / 右 当前可收听 */
+  .mode3{position:relative;display:grid;grid-template-columns:repeat(3,1fr);width:17.5em;flex:0 0 auto;
+    background:var(--panel);border:1px solid var(--border);border-radius:7px;padding:2px}
+  .mode3 .knob{position:absolute;top:2px;bottom:2px;left:2px;width:calc((100% - 4px) / 3);border-radius:5px;
+    background:#3b4654;transition:transform .18s ease,background .18s}
+  .mode3[data-mode="at"] .knob{transform:translateX(100%);background:var(--accent2)}
+  .mode3[data-mode="now"] .knob{transform:translateX(200%);background:var(--accent)}
+  .mode3 button{position:relative;z-index:1;border:0;background:transparent;border-radius:5px;
+    padding:5px 0;color:var(--muted);font-size:12.5px;white-space:nowrap}
+  .mode3 button[aria-checked="true"]{color:var(--text);font-weight:600}
+  .mode3[data-mode="at"] button[aria-checked="true"],
+  .mode3[data-mode="now"] button[aria-checked="true"]{color:#04121f}
   .langtoggles{display:flex;align-items:center;gap:0;background:var(--panel);
     border:1px solid var(--border);border-radius:7px;overflow:hidden;padding:0}
   .langtoggles button{border:0;border-radius:0;background:transparent;padding:7px 12px;
@@ -114,6 +120,7 @@
     overflow:hidden;position:relative}
   #map{display:block;width:100%;height:auto;cursor:grab;touch-action:none}
   #map.dragging{cursor:grabbing}
+  #map.over-sun{cursor:ew-resize}
   .mapctrl{position:absolute;top:10px;right:10px;display:flex;flex-direction:column;gap:6px;z-index:5}
   .mapctrl button{width:34px;height:34px;padding:0;font-size:16px;line-height:1;
     background:rgba(26,33,41,.9);backdrop-filter:blur(4px)}
@@ -171,8 +178,8 @@
   .pp-main b,.pp-main small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .pp-main b{font-weight:600}
   .pp-main small,.pp-side small{color:var(--muted);font-size:10.5px}
-  .pp-side{text-align:right;white-space:nowrap}
-  .pp-side small{display:block}
+  .pp-side{text-align:right;white-space:nowrap;min-width:0;max-width:9.5em}
+  .pp-side small{display:block;overflow:hidden;text-overflow:ellipsis}   /* 国家名过长时截断，给电台名留空间 */
   .pp-empty,.pp-more{color:var(--muted);padding:10px 12px}
   .pp-note{color:#6b7684;font-size:10.5px;padding:6px 12px 8px;border-top:1px solid var(--border)}
 
@@ -183,7 +190,6 @@
     h1{font-size:16px}
     main{padding:8px 8px 10px}
     footer{padding:10px 11px calc(12px + env(safe-area-inset-bottom, 0px))}
-    .rptlink{padding:5px 8px;font-size:12px}
     .mapwrap{border-radius:8px}
     .probepanel{top:auto;bottom:8px;left:8px;width:calc(100% - 60px);max-height:58%}
     .pp-note{display:none}   /* 手机上省空间；标题里已注明“估算” */
@@ -195,8 +201,6 @@
   <div class="headtop">
     <h1>📻 HF 短波广播频率查询 <span class="tag">B26 · 2026 冬季</span></h1>
     <div class="headbtns">
-      <a class="rptlink" href="country_exposure.html" target="_blank">🌍 国家暴露量</a>
-      <a class="rptlink" href="exposure.html" target="_blank">🗣 语言暴露量</a>
       <button id="collapsebtn" title="隐藏/显示上方面板（全屏看地图）">▾</button>
     </div>
   </div>
@@ -207,9 +211,13 @@
       <input type="number" id="th" min="0" max="23" placeholder="HH">
       <span style="color:var(--muted)">:</span>
       <input type="number" id="tm" min="0" max="59" placeholder="MM">
-      <label class="nowchk" title="勾选后使用当前 UTC 时间并锁定"><input type="checkbox" id="nowchk" checked> 现在</label>
     </div>
-    <button id="livebtn" class="primary">▶ 只看当前可收听</button>
+    <div class="mode3" id="mode3" role="radiogroup" aria-label="时间筛选" data-mode="now">
+      <span class="knob"></span>
+      <button data-mode="all" role="radio" aria-checked="false" title="显示全部排程，不按时间过滤">全时段</button>
+      <button data-mode="at" role="radio" aria-checked="false" title="只看上方 UTC 时间正在播出的（拖动地图上的太阳会自动切到这里）">指定时刻</button>
+      <button data-mode="now" role="radio" aria-checked="true" title="跳到当前 UTC 时间并持续跟随">当前可收听</button>
+    </div>
     <div class="langtoggles" id="langtoggles">
       <button data-lang="zh" title="只看中文">中文</button>
       <button data-lang="en" title="只看英文">English</button>
@@ -231,13 +239,7 @@
     <div class="mapwrap">
       <canvas id="map"></canvas>
       <div class="mapctrl">
-        <button id="probebtn" title="把收音机拖到地图上，查看该地点可接收的广播（点一下放到地图中央）">📻</button>
-        <button id="zin" title="放大">＋</button>
-        <button id="zout" title="缩小">－</button>
-        <button id="zreset" title="重置视图" style="font-size:13px">⤢</button>
-        <button id="freqlbl" title="显示/隐藏频率标签" style="font-size:12px;font-weight:700">Hz</button>
-        <button id="sunbtn" title="显示/隐藏太阳直射点" style="font-size:14px">☀</button>
-      </div>
+        <button id="probebtn" title="把收音机拖到地图上，查看该地点可接收的广播（点一下放到地图中央）">📻</button>      </div>
       <div class="maptip" id="maptip"></div>
       <div class="probepanel" id="probepanel" hidden></div>
     </div>
@@ -274,10 +276,12 @@ const LAND = JSON.parse(document.getElementById('hfland').textContent);
 
 const $ = s => document.querySelector(s);
 const qEl = $('#q'), thEl = $('#th'), tmEl = $('#tm'), langSel = $('#langsel'),
-      liveBtn = $('#livebtn'), nowChk = $('#nowchk'),
+      modeEl = $('#mode3'),
       content = $('#content'), statsEl = $('#stats'), chipsEl = $('#chips');
 
 let liveOnly = false;
+// 时间筛选档位：'all' 全时段 / 'at' 指定时刻 / 'now' 当前可收听（跟随真实 UTC 时间，每 30 秒刷新）
+let timeMode = 'now';
 
 // 中/英文快捷筛选（两个可同时选）
 const langToggles = { zh: false, en: false };
@@ -342,9 +346,9 @@ function debounce(fn,ms){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>f
 
 // ---- build UI ----
 // 只列出数据库中真实存在（能解析出语言名）的语言，跳过未解析的多语言代码。
-// 顺序按“语言暴露量”页（exposure.html）的排名；该页把中文、阿拉伯语各变体合并成一项，
-// 这里把对应语言放在合并项的位置、组内按记录数排列。不在该页上的语言按字母排在最后。
-// 注意：exposure.html 更新排名后，这份列表需要同步更新。
+// 顺序按原“语言暴露量”页（exposure.html，2026-10-27 已删除，可在 git 历史中找到）的排名；
+// 该页把中文、阿拉伯语各变体合并成一项，这里把对应语言放在合并项的位置、组内按记录数排列。
+// 不在列表中的语言按字母排在最后。
 const EXPOSURE_ORDER = [
   "Chinese (merged)", "English", "Arabic (merged)", "Russian", "Multiple languages", "Spanish",
   "Japanese", "Korean", "Persian", "French", "Tibetan", "Dari", "Undetermined", "Turkish", "Hausa",
@@ -475,8 +479,9 @@ function fmtDate(d){
 
 // ---- events ----
 qEl.addEventListener('input', debounce(render,150));
-thEl.addEventListener('input', render);
-tmEl.addEventListener('input', render);
+// 手动改时间 = 指定时刻
+thEl.addEventListener('input', () => { setTimeMode('at'); render(); });
+tmEl.addEventListener('input', () => { setTimeMode('at'); render(); });
 
 // 中/英文快捷按钮（可同时选中）
 const langToggleBtns = [...document.querySelectorAll('#langtoggles button')];
@@ -526,23 +531,21 @@ contentEl.addEventListener('click', e => {
   if (chev) chev.textContent = collapsed ? '▸' : '▾';
 });
 
-liveBtn.addEventListener('click', ()=>{
-  liveOnly = !liveOnly;
-  liveBtn.classList.toggle('on', liveOnly);
-  liveBtn.textContent = liveOnly ? '✓ 只看当前可收听' : '▶ 只看当前可收听';
-  render();
-});
-
-// “现在”复选框：勾选后锁定为当前 UTC 时间，时间输入框不可编辑
-function applyNowLock(){
-  const on = nowChk.checked;
-  thEl.disabled = on;
-  tmEl.disabled = on;
-  if (on){ const n = nowUTC(); thEl.value = n.h; tmEl.value = n.m; }
+// 三档开关。切到“当前可收听”时跳到当前 UTC 时间（太阳直射点随之刷新）
+function jumpToNow(){ const n = nowUTC(); thEl.value = n.h; tmEl.value = n.m; }
+function setTimeMode(m){
+  timeMode = m;
+  liveOnly = m !== 'all';
+  if (m === 'now') jumpToNow();
+  modeEl.dataset.mode = m;
+  modeEl.querySelectorAll('button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.mode === m)));
 }
-nowChk.addEventListener('change', () => { applyNowLock(); render(); });
+modeEl.addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (b){ setTimeMode(b.dataset.mode); render(); }
+});
 setInterval(() => {
-  if (nowChk.checked && !document.hidden){ const n = nowUTC(); thEl.value = n.h; tmEl.value = n.m; render(); }
+  if (timeMode === 'now' && !document.hidden){ jumpToNow(); render(); }
 }, 30000);
 
 // 隐藏/显示地图上方的所有面板（手机上看地图时用）
@@ -579,7 +582,7 @@ const MAP = (() => {
   // 功率 → 颜色：红→橙→黄→绿→青→蓝→紫（与箭头长度同一权重）
   function powerColor(p){
     const hue = powT(p) * 280;   // HSL: 0°红 → 60°黄 → 120°绿 → 180°青 → 240°蓝 → 280°紫
-    return `hsl(${hue.toFixed(0)}, 80%, 60%)`;
+    return `hsl(${hue.toFixed(0)}, 85%, 40%)`;   // 浅色地图上用较深的颜色才看得清
   }
   function bandName(f){
     if (f < 3000)  return '< 3000 kHz';
@@ -595,14 +598,10 @@ const MAP = (() => {
 
   // 视图状态（经纬度窗口）
   const view = { lon0: -180, lon1: 180, lat0: -60, lat1: 75 };
-  const HOME = { ...view };
 
   let siteGroups = [];     // 当前渲染的站点聚合
   let hoverSite = null;
   let dpr = 1;
-  let showFreq = true;     // 是否在箭头旁显示频率标签
-  let showSun = true;      // 是否显示太阳直射点
-  let labelQueue = [];     // 频率标签先收集，最后统一画在最上层
 
   function proj(lon, lat){
     const W = cv.width / dpr, H = cv.height / dpr;
@@ -678,8 +677,8 @@ const MAP = (() => {
 
   function drawGraticule(W, H){
     ctx.save();
-    ctx.strokeStyle = 'rgba(88,166,255,.12)';
-    ctx.fillStyle = 'rgba(139,152,165,.75)';
+    ctx.strokeStyle = 'rgba(60,80,100,.13)';
+    ctx.fillStyle = 'rgba(70,82,94,.8)';
     ctx.lineWidth = 1;
     ctx.font = '10px -apple-system,sans-serif';
     // 经线
@@ -714,9 +713,9 @@ const MAP = (() => {
         else ctx.lineTo(x, y);
       }
       ctx.closePath();
-      ctx.fillStyle = '#2b3b4d';
+      ctx.fillStyle = '#f3f4f6';
       ctx.fill();
-      ctx.strokeStyle = 'rgba(185,210,235,.92)';
+      ctx.strokeStyle = 'rgba(120,132,145,.85)';
       ctx.stroke();
     }
     ctx.restore();
@@ -745,19 +744,18 @@ const MAP = (() => {
 
   // 绘制太阳直射点标记（☀）
   function drawSun(){
-    if (!showSun) return;
     const { decl, lonS } = subSolar();
     const [x, y] = proj(lonS, decl);
     const W = cv.width / dpr, H = cv.height / dpr;
     if (x < -24 || x > W+24 || y < -24 || y > H+24) return;
     ctx.save();
     // 光晕
-    ctx.globalAlpha = 0.22;
-    ctx.fillStyle = '#ffd54a';
+    ctx.globalAlpha = 0.35;
+    ctx.fillStyle = '#ffc93a';
     ctx.beginPath(); ctx.arc(x, y, 15, 0, Math.PI*2); ctx.fill();
     // 光芒
-    ctx.globalAlpha = 0.95;
-    ctx.strokeStyle = '#ffd54a';
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = '#d99a00';
     ctx.lineWidth = 2;
     ctx.lineCap = 'round';
     for (let i=0;i<8;i++){
@@ -769,8 +767,8 @@ const MAP = (() => {
     }
     // 日面
     ctx.beginPath(); ctx.arc(x, y, 5.2, 0, Math.PI*2);
-    ctx.fillStyle = '#ffe57a'; ctx.fill();
-    ctx.strokeStyle = '#c9962a'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillStyle = '#ffd54a'; ctx.fill();
+    ctx.strokeStyle = '#a8740f'; ctx.lineWidth = 1.2; ctx.stroke();
     ctx.restore();
   }
 
@@ -782,27 +780,33 @@ const MAP = (() => {
     const dy = -Math.cos(rad) * lenPx;
     const x1 = x0 + dx, y1 = y0 + dy;
 
+    const head = Math.max(4, Math.min(11, lenPx * 0.28));
+    const ang = Math.atan2(dy, dx);
+    const headPath = () => {
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x1 - head * Math.cos(ang - 0.42), y1 - head * Math.sin(ang - 0.42));
+      ctx.lineTo(x1 - head * Math.cos(ang + 0.42), y1 - head * Math.sin(ang + 0.42));
+      ctx.closePath();
+    };
+
     ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    // 白色描边垫底，让箭头在浅色地图和相互重叠时都能分辨
+    ctx.globalAlpha = 0.9;
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = width + 2.6;
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+    ctx.lineWidth = 2.6;
+    headPath(); ctx.stroke();
+
     ctx.globalAlpha = alpha;
     ctx.strokeStyle = color;
     ctx.fillStyle = color;
     ctx.lineWidth = width;
-    ctx.lineCap = 'round';
-
-    ctx.beginPath();
-    ctx.moveTo(x0, y0);
-    ctx.lineTo(x1, y1);
-    ctx.stroke();
-
-    // 箭头尖
-    const head = Math.max(4, Math.min(11, lenPx * 0.28));
-    const ang = Math.atan2(dy, dx);
-    ctx.beginPath();
-    ctx.moveTo(x1, y1);
-    ctx.lineTo(x1 - head * Math.cos(ang - 0.42), y1 - head * Math.sin(ang - 0.42));
-    ctx.lineTo(x1 - head * Math.cos(ang + 0.42), y1 - head * Math.sin(ang + 0.42));
-    ctx.closePath();
-    ctx.fill();
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+    headPath(); ctx.fill();   // 箭头尖
     ctx.restore();
     return [x1, y1];
   }
@@ -820,36 +824,21 @@ const MAP = (() => {
       const lenPx = Math.max(6, (lenDeg / dpp) / latScale);
       const t = powT(g.maxPow);
       const width = 1.2 + t * 2.6;
-      const alpha = 0.45 + 0.5 * t;
-      let tipX = x, tipY = y;
+      const alpha = 0.75 + 0.25 * t;
       if (g.az === 0){
-        // 全向：画圆环
+        // 全向：画圆环（同样先垫白色描边）
         ctx.save();
-        ctx.globalAlpha = alpha * 0.9;
+        ctx.globalAlpha = 0.9;
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = width + 2.6;
+        ctx.beginPath(); ctx.arc(x, y, lenPx * 0.6, 0, Math.PI*2); ctx.stroke();
+        ctx.globalAlpha = alpha;
         ctx.strokeStyle = g.color;
         ctx.lineWidth = width;
-        ctx.beginPath();
-        ctx.arc(x, y, lenPx * 0.6, 0, Math.PI*2);
-        ctx.stroke();
+        ctx.beginPath(); ctx.arc(x, y, lenPx * 0.6, 0, Math.PI*2); ctx.stroke();
         ctx.restore();
-        tipX = x; tipY = y - lenPx * 0.6 - 4;
       } else {
-        const tip = drawArrow(x, y, g.az, lenPx, g.color, width, alpha);
-        if (tip){ tipX = tip[0]; tipY = tip[1]; }
-      }
-
-      // 频率标签（kHz）——先收集坐标，最后统一画在最上层，避免被其他箭头遮住
-      if (showFreq && g.freqs && g.freqs.length){
-        const label = g.freqs.length <= 3
-          ? g.freqs.join('/')
-          : g.freqs.slice(0,3).join('/') + '…';
-        let lx = tipX, ly = tipY;
-        if (g.az !== 0){
-          const rad = g.az * Math.PI/180;
-          lx = tipX + Math.sin(rad) * 9;
-          ly = tipY - Math.cos(rad) * 9;
-        }
-        labelQueue.push({ text: label, x: lx, y: ly });
+        drawArrow(x, y, g.az, lenPx, g.color, width, alpha);
       }
     }
 
@@ -858,40 +847,24 @@ const MAP = (() => {
     ctx.save();
     ctx.beginPath();
     ctx.arc(x, y, hot ? 5 : 3, 0, Math.PI*2);
-    ctx.fillStyle = hot ? '#ffffff' : '#0f1419';
+    ctx.fillStyle = hot ? '#1a7f37' : '#ffffff';
     ctx.fill();
     ctx.lineWidth = 1.6;
-    ctx.strokeStyle = hot ? '#3fb950' : 'rgba(230,237,243,.9)';
+    ctx.strokeStyle = hot ? '#ffffff' : '#2b3540';
     ctx.stroke();
     ctx.restore();
 
     // 放大时显示台站名
     if (dpp < 0.35){
       ctx.save();
-      ctx.globalAlpha = hot ? 1 : 0.7;
-      ctx.fillStyle = hot ? '#3fb950' : 'rgba(200,210,222,.85)';
+      ctx.globalAlpha = hot ? 1 : 0.8;
+      ctx.fillStyle = hot ? '#1a7f37' : '#3a4652';
       ctx.font = (hot?'bold ':'') + '10.5px -apple-system,sans-serif';
       ctx.fillText(s.name, x + 6, y - 5);
       ctx.restore();
     }
 
     s._px = x; s._py = y;
-  }
-
-  function drawLabels(){
-    if (!labelQueue.length) return;
-    ctx.save();
-    ctx.font = '600 9.5px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    for (const l of labelQueue){
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = 'rgba(8,13,18,.95)';
-      ctx.strokeText(l.text, l.x, l.y);
-      ctx.fillStyle = '#e6edf3';
-      ctx.fillText(l.text, l.x, l.y);
-    }
-    ctx.restore();
   }
 
   // 每帧最多重绘一次：拖动/悬停/缩放时的多次 draw() 请求合并到下一帧
@@ -904,16 +877,14 @@ const MAP = (() => {
   function drawNow(){
     const W = cv.width / dpr, H = cv.height / dpr;
     ctx.clearRect(0, 0, W, H);
-    ctx.fillStyle = '#10171e';
+    ctx.fillStyle = '#dcdfe3';   // 海洋：浅灰
     ctx.fillRect(0, 0, W, H);
     drawGraticule(W, H);
     drawLand(W, H);
     // 暗色下让站点箭头更亮：先按功率从小到大画，大的覆盖在上面
-    labelQueue = [];
     const sorted = [...siteGroups].sort((a,b)=>a.maxPow-b.maxPow);
     for (const s of sorted) drawSite(s, W, H);
     drawSun();      // 太阳直射点标记（在箭头之上）
-    drawLabels();   // 频率标签最后绘制，始终位于最顶层
     drawProbe();    // 接收点图钉在最上层
   }
 
@@ -1014,6 +985,27 @@ const MAP = (() => {
   let probeResults = [];
   let probeDrag = null;      // 拖动图钉时的抓取偏移
   let lastRows = [];         // 最近一次 build 的过滤结果
+
+  // 拖动太阳直射点：左右拖动改变 UTC 小时（0~23，按整点吸附），分钟不变
+  let sunDrag = false;
+  function hitSun(mx, my){
+    const { decl, lonS } = subSolar();
+    const [x, y] = proj(lonS, decl);
+    return Math.hypot(mx - x, my - y) < 18;
+  }
+  function moveSunDrag(mx){
+    const W = cv.width / dpr;
+    const lon = view.lon0 + (mx / W) * (view.lon1 - view.lon0);
+    const h0 = parseInt(thEl.value,10) || 0, m = parseInt(tmEl.value,10) || 0;
+    // 直射点经度 lonS = 15·(12 − UTC小时 − 时差方程/60)，由当前位置反推时差项，再解出目标小时
+    const eotH = 12 - (h0 + m/60) - subSolar().lonS / 15;
+    const h = ((Math.round(12 - lon/15 - eotH - m/60) % 24) + 24) % 24;
+    const modeChanged = timeMode !== 'at';   // 拖动太阳时开关自动打到“指定时刻”
+    if (modeChanged) setTimeMode('at');
+    if (h !== h0) thEl.value = h;
+    if (modeChanged || h !== h0) render();
+  }
+
   function evtPos(e){
     const r = cv.getBoundingClientRect();
     const t = e.touches ? e.touches[0] : e;
@@ -1022,6 +1014,8 @@ const MAP = (() => {
   cv.addEventListener('mousemove', e => {
     const [mx, my] = evtPos(e);
     if (probeDrag){ moveProbeDrag(mx, my); return; }
+    if (sunDrag){ moveSunDrag(mx); return; }
+    cv.classList.toggle('over-sun', !drag && hitSun(mx, my));
     if (drag){
       const W = cv.width/dpr;
       const dLon = (mx - drag.x) * (view.lon1-view.lon0) / W;
@@ -1042,10 +1036,12 @@ const MAP = (() => {
   cv.addEventListener('mousedown', e => {
     const [mx,my]=evtPos(e);
     if (hitProbe(mx, my)){ startProbeDrag(mx, my); return; }
+    if (hitSun(mx, my)){ sunDrag = true; hideTip(); return; }
     drag={x:mx,y:my}; cv.classList.add('dragging');
   });
   window.addEventListener('mouseup', () => {
     if (probeDrag) endProbeDrag();
+    sunDrag = false;
     drag = null; cv.classList.remove('dragging');
   });
 
@@ -1061,6 +1057,7 @@ const MAP = (() => {
     if (e.touches.length === 1){
       const [mx,my]=evtPos(e);
       if (hitProbe(mx, my)){ startProbeDrag(mx, my); drag=null; pinch=null; return; }
+      if (hitSun(mx, my)){ sunDrag = true; hideTip(); drag=null; pinch=null; return; }
       drag={x:mx,y:my}; pinch=null;
     }
     else if (e.touches.length === 2){ drag=null; pinch=pinchState(e); }
@@ -1069,6 +1066,9 @@ const MAP = (() => {
     if (probeDrag && e.touches.length===1){
       e.preventDefault();
       const [mx,my]=evtPos(e); moveProbeDrag(mx, my);
+    } else if (sunDrag && e.touches.length===1){
+      e.preventDefault();
+      moveSunDrag(evtPos(e)[0]);
     } else if (pinch && e.touches.length===2){
       e.preventDefault();
       const p = pinchState(e);
@@ -1092,6 +1092,7 @@ const MAP = (() => {
   }, {passive:false});
   function touchEnd(e){
     if (probeDrag){ endProbeDrag(); drag = null; pinch = null; return; }
+    if (sunDrag){ sunDrag = false; drag = null; pinch = null; return; }
     pinch = null;
     // 双指抬起一指后，用剩下的手指继续拖动，避免画面跳动
     if (e.touches.length === 1){ const [mx,my]=evtPos(e); drag={x:mx,y:my}; } else drag=null;
@@ -1133,15 +1134,6 @@ const MAP = (() => {
     zoom(e.deltaY > 0 ? 1.18 : 0.85, mx, my);
   }, {passive:false});
 
-  document.getElementById('zin').onclick  = () => zoom(0.75);
-  document.getElementById('zout').onclick = () => zoom(1.33);
-  document.getElementById('zreset').onclick = () => { Object.assign(view, HOME); hideTip(); resize(); };
-  const freqBtn = document.getElementById('freqlbl');
-  freqBtn.classList.toggle('on', showFreq);
-  freqBtn.onclick = () => { showFreq = !showFreq; freqBtn.classList.toggle('on', showFreq); draw(); };
-  const sunBtn = document.getElementById('sunbtn');
-  sunBtn.classList.toggle('on', showSun);
-  sunBtn.onclick = () => { showSun = !showSun; sunBtn.classList.toggle('on', showSun); draw(); };
 
   function renderLegend(){
     let h = '<div style="color:var(--text);font-weight:600;margin-bottom:6px">图例</div>';
@@ -1166,12 +1158,12 @@ const MAP = (() => {
                          − 白天 D 层吸收（低频）− 超过 MUF 的损耗（夜间高频）
      ============================================================ */
   const RAD = Math.PI / 180;
-  const LEVELS = [   // 估算场强（dBμV/m）下限 → 等级
-    { min: 54, n: 5, name: '极强', color: '#3fb950' },
-    { min: 44, n: 4, name: '强',   color: '#9be36b' },
-    { min: 34, n: 3, name: '良好', color: '#d2c022' },
-    { min: 24, n: 2, name: '一般', color: '#f0883e' },
-    { min: 14, n: 1, name: '微弱', color: '#8b98a5' },
+  const LEVELS = [   // 估算场强（dBμV/m）下限 → 等级；color 用于深色面板，line 用于浅色地图上的连线
+    { min: 54, n: 5, name: '极强', color: '#3fb950', line: '#1a7f37' },
+    { min: 44, n: 4, name: '强',   color: '#9be36b', line: '#4d8a1c' },
+    { min: 34, n: 3, name: '良好', color: '#d2c022', line: '#9a7d00' },
+    { min: 24, n: 2, name: '一般', color: '#f0883e', line: '#c4560e' },
+    { min: 14, n: 1, name: '微弱', color: '#8b98a5', line: '#5c6773' },
   ];
   const PROBE_MAX = 60;   // 列表最多显示条数
 
@@ -1285,7 +1277,7 @@ const MAP = (() => {
       ctx.lineWidth = 1.6; ctx.setLineDash([5, 4]); ctx.globalAlpha = 0.8;
       for (const {r, lv} of probeResults.slice(0, 5)){
         const [sx, sy] = proj(r.lon, r.lat);
-        ctx.strokeStyle = lv.color;
+        ctx.strokeStyle = lv.line;
         ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(px, py); ctx.stroke();
       }
       ctx.setLineDash([]); ctx.globalAlpha = 1;
@@ -1343,10 +1335,7 @@ function init(){
   const n = nowUTC();
   if (thEl.value==='' || thEl.value==null) thEl.value = n.h;
   if (tmEl.value==='' || tmEl.value==null) tmEl.value = n.m;
-  liveOnly = true;
-  liveBtn.classList.add('on');
-  liveBtn.textContent = '✓ 只看当前可收听';
-  applyNowLock();
+  setTimeMode('now');
   showTab(true);   // 默认进入地图视图（内部会 resize + render）
 }
 init();
