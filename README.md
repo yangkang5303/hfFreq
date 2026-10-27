@@ -31,7 +31,7 @@ npx wrangler@4 rollback <version-id>
 | `public/exposure.html` | 语言周暴露量排行（静态页） |
 | `public/country_exposure.html` | 发射国家周暴露量排行（静态页） |
 | `tools/index.original.html` | 2026-10-26 优化前的线上原版（1.37 MB），留作参照 |
-| `tools/build.py` | 把原版转换成现在 `public/index.html` 的一次性脚本 |
+| `tools/build.py` | 把原版转换成 2026-10-26 优化版的一次性脚本（之后的改动直接在 `public/index.html` 上做，不再经过它） |
 | `tools/verify.js` | 校验转换后的数据与原版逐条一致 |
 
 ## index.html 的数据格式
@@ -49,6 +49,12 @@ npx wrangler@4 rollback <version-id>
 
 - **2026-10-26 优化**：页面 1.37 MB → 485 KB；地图视图下不再生成隐藏的列表表格；首次加载只渲染一次；地图重绘合并到每帧一次；后台标签页跳过每 30 秒的刷新；增加 favicon、meta description。
 - **2026-10-26 手机双指缩放**：画布设置了 `touch-action:none`（禁用了浏览器自带缩放），所以要自己实现：双指捏合以两指中点为中心缩放，同时可以平移；抬起一指后剩下的手指继续拖动。
+
+- **2026-10-27 界面精简**：去掉排序（列表固定按频率、按频段分组）；移除“使用说明”；统计行移到地图下方新增的页脚（含 HFCC 数据来源和 GitHub 链接），地图高度相应减小；收起面板时保留中/英文快捷按钮；语言下拉按“语言暴露量”页的排名排列。
+
+## 注意
+
+- 语言下拉的顺序是 `index.html` 里写死的 `EXPOSURE_ORDER`（抄自 `exposure.html`）。**更新 `exposure.html` 的排名后要同步改这份列表**。该页的 “Chinese (merged)”“Arabic (merged)” 两项由 `MERGED_LANGS` 展开成具体语言。
 
 ## 待确认
 
