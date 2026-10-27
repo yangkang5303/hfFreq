@@ -141,6 +141,41 @@
   .maptip td.k{color:var(--muted);white-space:nowrap}
   .maptip .more{color:var(--muted);font-size:11px;margin-top:4px;white-space:nowrap}
 
+  /* ---- 接收点（拖动 📻 到地图） ---- */
+  #probebtn{font-size:17px;touch-action:none;cursor:grab}
+  .probe-ghost{position:fixed;z-index:1000;pointer-events:none;font-size:30px;line-height:1;
+    transform:translate(-50%,-115%);filter:drop-shadow(0 3px 6px rgba(0,0,0,.6));opacity:0}
+  .probe-ghost.show{opacity:1}
+  .probe-ghost::after{content:"";position:absolute;left:50%;bottom:-9px;width:8px;height:8px;margin-left:-4px;
+    border-radius:50%;background:var(--accent2);box-shadow:0 0 0 3px rgba(88,166,255,.35)}
+  .probepanel{position:absolute;z-index:6;top:10px;left:10px;width:min(370px,calc(100% - 64px));
+    max-height:calc(100% - 20px);display:flex;flex-direction:column;
+    background:rgba(15,20,25,.95);backdrop-filter:blur(6px);border:1px solid var(--accent2);border-radius:9px;
+    box-shadow:0 6px 24px rgba(0,0,0,.55);font-size:12px}
+  .probepanel[hidden]{display:none}
+  .pp-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;
+    padding:9px 10px 7px 12px;border-bottom:1px solid var(--border)}
+  .pp-title{font-weight:700;color:var(--accent2)}
+  .pp-meta{color:var(--muted);font-size:11px}
+  .pp-meta b{color:var(--text)}
+  .pp-close{width:26px;height:26px;padding:0;font-size:12px;line-height:1;flex:0 0 auto}
+  .pp-list{overflow-y:auto;flex:1 1 auto;min-height:0}
+  .pp-row{display:grid;grid-template-columns:auto auto minmax(0,1fr) auto;gap:9px;align-items:center;
+    padding:5px 12px;border-bottom:1px solid rgba(45,57,71,.5)}
+  .pp-bars{display:inline-flex;gap:2px;align-items:flex-end}
+  .pp-bars i{width:3px;background:#2d3947;border-radius:1px}
+  .pp-bars i:nth-child(1){height:5px} .pp-bars i:nth-child(2){height:7px} .pp-bars i:nth-child(3){height:9px}
+  .pp-bars i:nth-child(4){height:11px} .pp-bars i:nth-child(5){height:13px}
+  .pp-freq{font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .pp-freq small{color:var(--muted);font-weight:400;font-size:10px}
+  .pp-main b,.pp-main small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pp-main b{font-weight:600}
+  .pp-main small,.pp-side small{color:var(--muted);font-size:10.5px}
+  .pp-side{text-align:right;white-space:nowrap}
+  .pp-side small{display:block}
+  .pp-empty,.pp-more{color:var(--muted);padding:10px 12px}
+  .pp-note{color:#6b7684;font-size:10.5px;padding:6px 12px 8px;border-top:1px solid var(--border)}
+
   @media(max-width:820px){
     .col-pow,.col-az,.col-ant,.col-days,.col-date,.col-ciraf{display:none}
     #q{flex:1 1 150px}
@@ -150,6 +185,8 @@
     footer{padding:10px 11px calc(12px + env(safe-area-inset-bottom, 0px))}
     .rptlink{padding:5px 8px;font-size:12px}
     .mapwrap{border-radius:8px}
+    .probepanel{top:auto;bottom:8px;left:8px;width:calc(100% - 60px);max-height:58%}
+    .pp-note{display:none}   /* 手机上省空间；标题里已注明“估算” */
   }
 </style>
 </head>
@@ -194,6 +231,7 @@
     <div class="mapwrap">
       <canvas id="map"></canvas>
       <div class="mapctrl">
+        <button id="probebtn" title="把收音机拖到地图上，查看该地点可接收的广播（点一下放到地图中央）">📻</button>
         <button id="zin" title="放大">＋</button>
         <button id="zout" title="缩小">－</button>
         <button id="zreset" title="重置视图" style="font-size:13px">⤢</button>
@@ -201,6 +239,7 @@
         <button id="sunbtn" title="显示/隐藏太阳直射点" style="font-size:14px">☀</button>
       </div>
       <div class="maptip" id="maptip"></div>
+      <div class="probepanel" id="probepanel" hidden></div>
     </div>
   </div>
 </main>
@@ -875,6 +914,7 @@ const MAP = (() => {
     for (const s of sorted) drawSite(s, W, H);
     drawSun();      // 太阳直射点标记（在箭头之上）
     drawLabels();   // 频率标签最后绘制，始终位于最顶层
+    drawProbe();    // 接收点图钉在最上层
   }
 
   // 根据当前过滤后的行重建站点聚合
@@ -917,6 +957,8 @@ const MAP = (() => {
       groupsOut.push(s);
     }
     siteGroups = groupsOut;
+    lastRows = rows;
+    if (probe && !probeDrag) updateProbe();   // 时间/筛选变化时刷新接收点列表
   }
 
   function pickSite(mx, my){
@@ -965,6 +1007,13 @@ const MAP = (() => {
 
   // ---- 交互：悬停 / 拖动 / 缩放 ----
   let drag = null;
+  // 接收点状态（逻辑见文件后部“接收点”一节）
+  const probeBtn = document.getElementById('probebtn');
+  const probePanel = document.getElementById('probepanel');
+  let probe = null;          // {lat, lon}
+  let probeResults = [];
+  let probeDrag = null;      // 拖动图钉时的抓取偏移
+  let lastRows = [];         // 最近一次 build 的过滤结果
   function evtPos(e){
     const r = cv.getBoundingClientRect();
     const t = e.touches ? e.touches[0] : e;
@@ -972,6 +1021,7 @@ const MAP = (() => {
   }
   cv.addEventListener('mousemove', e => {
     const [mx, my] = evtPos(e);
+    if (probeDrag){ moveProbeDrag(mx, my); return; }
     if (drag){
       const W = cv.width/dpr;
       const dLon = (mx - drag.x) * (view.lon1-view.lon0) / W;
@@ -989,8 +1039,15 @@ const MAP = (() => {
     else if (hoverSite){ hideTip(); }
   });
   cv.addEventListener('mouseleave', hideTip);
-  cv.addEventListener('mousedown', e => { const [mx,my]=evtPos(e); drag={x:mx,y:my}; cv.classList.add('dragging'); });
-  window.addEventListener('mouseup', () => { drag = null; cv.classList.remove('dragging'); });
+  cv.addEventListener('mousedown', e => {
+    const [mx,my]=evtPos(e);
+    if (hitProbe(mx, my)){ startProbeDrag(mx, my); return; }
+    drag={x:mx,y:my}; cv.classList.add('dragging');
+  });
+  window.addEventListener('mouseup', () => {
+    if (probeDrag) endProbeDrag();
+    drag = null; cv.classList.remove('dragging');
+  });
 
   // 触摸：单指拖动，双指捏合缩放（两指中点移动时同时平移）
   let pinch = null;
@@ -1001,11 +1058,18 @@ const MAP = (() => {
              d: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) };
   }
   cv.addEventListener('touchstart', e => {
-    if (e.touches.length === 1){ const [mx,my]=evtPos(e); drag={x:mx,y:my}; pinch=null; }
+    if (e.touches.length === 1){
+      const [mx,my]=evtPos(e);
+      if (hitProbe(mx, my)){ startProbeDrag(mx, my); drag=null; pinch=null; return; }
+      drag={x:mx,y:my}; pinch=null;
+    }
     else if (e.touches.length === 2){ drag=null; pinch=pinchState(e); }
   }, {passive:true});
   cv.addEventListener('touchmove', e => {
-    if (pinch && e.touches.length===2){
+    if (probeDrag && e.touches.length===1){
+      e.preventDefault();
+      const [mx,my]=evtPos(e); moveProbeDrag(mx, my);
+    } else if (pinch && e.touches.length===2){
       e.preventDefault();
       const p = pinchState(e);
       if (p.d > 0 && pinch.d > 0){
@@ -1027,6 +1091,7 @@ const MAP = (() => {
     }
   }, {passive:false});
   function touchEnd(e){
+    if (probeDrag){ endProbeDrag(); drag = null; pinch = null; return; }
     pinch = null;
     // 双指抬起一指后，用剩下的手指继续拖动，避免画面跳动
     if (e.touches.length === 1){ const [mx,my]=evtPos(e); drag={x:mx,y:my}; } else drag=null;
@@ -1095,9 +1160,181 @@ const MAP = (() => {
     legend.innerHTML = h;
   }
 
+  /* ============================================================
+     接收点：把 📻 拖到地图上，估算该点能收到的广播并按强弱排序
+     粗略模型（仅供参考）：自由空间场强 + 天线方向增益 − 每跳损耗
+                         − 白天 D 层吸收（低频）− 超过 MUF 的损耗（夜间高频）
+     ============================================================ */
+  const RAD = Math.PI / 180;
+  const LEVELS = [   // 估算场强（dBμV/m）下限 → 等级
+    { min: 54, n: 5, name: '极强', color: '#3fb950' },
+    { min: 44, n: 4, name: '强',   color: '#9be36b' },
+    { min: 34, n: 3, name: '良好', color: '#d2c022' },
+    { min: 24, n: 2, name: '一般', color: '#f0883e' },
+    { min: 14, n: 1, name: '微弱', color: '#8b98a5' },
+  ];
+  const PROBE_MAX = 60;   // 列表最多显示条数
+
+  // 大圆距离（km）、从发射台出发的方位角、路径中点
+  function pathGeom(lat1, lon1, lat2, lon2){
+    const p1 = lat1*RAD, p2 = lat2*RAD, dl = (lon2-lon1)*RAD;
+    const a = Math.sin((p2-p1)/2)**2 + Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;
+    const dist = 2 * 6371 * Math.asin(Math.min(1, Math.sqrt(a)));
+    const brg = (Math.atan2(Math.sin(dl)*Math.cos(p2),
+      Math.cos(p1)*Math.sin(p2) - Math.sin(p1)*Math.cos(p2)*Math.cos(dl)) / RAD + 360) % 360;
+    const bx = Math.cos(p2)*Math.cos(dl), by = Math.cos(p2)*Math.sin(dl);
+    const mlat = Math.atan2(Math.sin(p1)+Math.sin(p2), Math.sqrt((Math.cos(p1)+bx)**2 + by**2)) / RAD;
+    const mlon = lon1 + Math.atan2(by, Math.cos(p1)+bx) / RAD;
+    return { dist, brg, mlat, mlon };
+  }
+
+  function estimateField(r, lat, lon, sun){
+    const p = parseFloat(r.pow);
+    if (!(p > 0) || r.lat == null || r.lon == null) return null;
+    const g = pathGeom(r.lat, r.lon, lat, lon);
+    const d = Math.max(g.dist, 50);
+    const az = parseInt(r.az, 10) || 0;
+    let gain;
+    if (az === 0) gain = 2;   // 全向
+    else {
+      const off = Math.abs(((g.brg - az) % 360 + 540) % 360 - 180);   // 偏离天线主瓣的角度 0..180
+      gain = Math.max(-8, 15 - 12 * (off / 30) ** 2);
+    }
+    const fMHz = r.f / 1000;
+    const hops = Math.max(1, Math.ceil(d / 3500));
+    // 路径中点的太阳天顶角余弦：>0 为白天
+    const cosz = Math.max(0, Math.sin(g.mlat*RAD)*Math.sin(sun.decl*RAD)
+      + Math.cos(g.mlat*RAD)*Math.cos(sun.decl*RAD)*Math.cos((g.mlon - sun.lonS)*RAD));
+    const absorb = Math.min(60, hops * 30 * cosz * (5 / fMHz) ** 2);
+    const muf = 10 + 18 * cosz;   // 夜间约 10 MHz，正午约 28 MHz
+    const mufLoss = fMHz > muf ? Math.min(40, 30 * (fMHz / muf - 1)) : 0;
+    const E = 104.8 + 10*Math.log10(p) + gain - 20*Math.log10(d) - 10 - hops*6 - absorb - mufLoss;
+    return { E, dist: g.dist };
+  }
+
+  function updateProbe(){
+    if (!probe){ probePanel.hidden = true; return; }
+    const curMin = (parseInt(thEl.value,10)||0)*60 + (parseInt(tmEl.value,10)||0);
+    const dow = nowUTC().dow;
+    const sun = subSolar();
+    const res = [];
+    for (const r of lastRows){
+      if (!isOnAir(r, curMin, dow)) continue;
+      const est = estimateField(r, probe.lat, probe.lon, sun);
+      const lv = est && LEVELS.find(l => est.E >= l.min);
+      if (lv) res.push({ r, E: est.E, dist: est.dist, lv });
+    }
+    probeResults = res.sort((a,b) => b.E - a.E);
+    renderProbePanel(curMin);
+    draw();
+  }
+
+  function fmtLatLon(lat, lon){
+    return `${Math.abs(lat).toFixed(1)}°${lat>=0?'N':'S'}, ${Math.abs(lon).toFixed(1)}°${lon>=0?'E':'W'}`;
+  }
+  function renderProbePanel(curMin){
+    const shown = probeResults.slice(0, PROBE_MAX);
+    let h = `<div class="pp-head"><div><div class="pp-title">📻 ${fmtLatLon(probe.lat, probe.lon)}</div>`+
+      `<div class="pp-meta">${toHM(curMin)} UTC · 估算可接收 <b>${probeResults.length}</b> 条</div></div>`+
+      `<button class="pp-close" title="关闭">✕</button></div>`;
+    if (!shown.length){
+      h += '<div class="pp-empty">此时此地估计收不到当前筛选条件下的广播。<br>试试换个时间或位置。</div>';
+    } else {
+      h += '<div class="pp-list">';
+      for (const {r, lv, dist} of shown){
+        const bars = [1,2,3,4,5].map(i => `<i${i<=lv.n ? ` style="background:${lv.color}"` : ''}></i>`).join('');
+        h += `<div class="pp-row"><span class="pp-bars" title="强度 ${lv.n}/5">${bars}</span>`+
+          `<span class="pp-freq">${r.f}<small> kHz</small></span>`+
+          `<span class="pp-main"><b>${r.brcname||r.brc||'—'}</b><small>${r.langname||r.lang||''} · ${r.s}–${r.e} · ${r.site||r.loc||''}</small></span>`+
+          `<span class="pp-side"><span style="color:${lv.color}">${lv.name}</span><small>${r.admname||r.adm||''} · ${Math.round(dist).toLocaleString()} km</small></span></div>`;
+      }
+      if (probeResults.length > shown.length)
+        h += `<div class="pp-more">… 另有 ${probeResults.length - shown.length} 条较弱信号</div>`;
+      h += '</div>';
+    }
+    h += '<div class="pp-note">强度按发射功率、天线方向、距离和昼夜电离层粗略估算，仅供参考。拖动地图上的 📻 可换位置。</div>';
+    probePanel.innerHTML = h;
+    probePanel.hidden = false;
+    probePanel.querySelector('.pp-close').onclick = clearProbe;
+  }
+  function clearProbe(){ probe = null; probeResults = []; probePanel.hidden = true; draw(); }
+
+  // 画布坐标 → 经纬度
+  function setProbeAt(mx, my){
+    const W = cv.width/dpr, H = cv.height/dpr;
+    probe = { lon: view.lon0 + (mx/W)*(view.lon1-view.lon0), lat: view.lat1 - (my/H)*(view.lat1-view.lat0) };
+  }
+  function hitProbe(mx, my){
+    if (!probe) return false;
+    const [px, py] = proj(probe.lon, probe.lat);
+    return Math.hypot(mx - px, my - (py - 18)) < 16;
+  }
+  function startProbeDrag(mx, my){
+    const [px, py] = proj(probe.lon, probe.lat);
+    probeDrag = { dx: px - mx, dy: py - my };   // 记住抓取点与针尖的偏移，拖动时不跳
+    hideTip();
+  }
+  function moveProbeDrag(mx, my){ setProbeAt(mx + probeDrag.dx, my + probeDrag.dy); draw(); }
+  function endProbeDrag(){ probeDrag = null; updateProbe(); }
+
+  function drawProbe(){
+    if (!probe) return;
+    const [px, py] = proj(probe.lon, probe.lat);
+    ctx.save();
+    if (!probeDrag){   // 连线到最强的 5 个发射台
+      ctx.lineWidth = 1.6; ctx.setLineDash([5, 4]); ctx.globalAlpha = 0.8;
+      for (const {r, lv} of probeResults.slice(0, 5)){
+        const [sx, sy] = proj(r.lon, r.lat);
+        ctx.strokeStyle = lv.color;
+        ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(px, py); ctx.stroke();
+      }
+      ctx.setLineDash([]); ctx.globalAlpha = 1;
+    }
+    // 图钉：圆头 + 针尖指向接收点
+    ctx.fillStyle = '#58a6ff'; ctx.strokeStyle = '#0f1419'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(px, py - 20, 12, Math.PI*0.75, Math.PI*2.25); ctx.lineTo(px, py); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    ctx.font = '13px -apple-system,"Apple Color Emoji","Segoe UI Emoji",sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('📻', px, py - 20);
+    ctx.restore();
+  }
+
+  // 从右上角按钮拖出 📻（鼠标和触摸统一用 pointer 事件）；只是点一下则放到地图中央
+  probeBtn.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    const ghost = document.createElement('div');
+    ghost.className = 'probe-ghost'; ghost.textContent = '📻';
+    document.body.appendChild(ghost);
+    const sx = e.clientX, sy = e.clientY;
+    let moved = false;
+    const move = ev => {
+      if (Math.hypot(ev.clientX - sx, ev.clientY - sy) > 6) moved = true;
+      ghost.style.left = ev.clientX + 'px'; ghost.style.top = ev.clientY + 'px';
+      ghost.classList.toggle('show', moved);
+    };
+    const end = ev => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', end);
+      window.removeEventListener('pointercancel', end);
+      ghost.remove();
+      if (ev.type === 'pointercancel') return;
+      const b = cv.getBoundingClientRect();
+      if (!moved) setProbeAt(b.width/2, b.height/2);
+      else if (document.elementFromPoint(ev.clientX, ev.clientY) === cv) setProbeAt(ev.clientX - b.left, ev.clientY - b.top);
+      else return;   // 没放到地图上
+      hideTip(); updateProbe();
+    };
+    move(e);
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', end);
+    window.addEventListener('pointercancel', end);
+  });
+
   return {
     build, draw, resize, renderLegend,
     get siteGroups(){ return siteGroups; },
+    get probeResults(){ return probeResults; },
   };
 })();
 
