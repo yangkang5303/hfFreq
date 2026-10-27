@@ -1207,11 +1207,16 @@ const MAP = (() => {
     }
     const fMHz = r.f / 1000;
     const hops = Math.max(1, Math.ceil(d / 3500));
-    // 路径中点的太阳天顶角余弦：>0 为白天
-    const cosz = Math.max(0, Math.sin(g.mlat*RAD)*Math.sin(sun.decl*RAD)
-      + Math.cos(g.mlat*RAD)*Math.cos(sun.decl*RAD)*Math.cos((g.mlon - sun.lonS)*RAD));
+    // 路径中点 h 小时前的太阳天顶角余弦（太阳每小时西移 15°）：>0 为白天
+    const coszAgo = h => Math.max(0, Math.sin(g.mlat*RAD)*Math.sin(sun.decl*RAD)
+      + Math.cos(g.mlat*RAD)*Math.cos(sun.decl*RAD)*Math.cos((g.mlon - sun.lonS - 15*h)*RAD));
+    const cosz = coszAgo(0);
+    // D 层吸收随日落几乎立即消失，用当前太阳高度
     const absorb = Math.min(60, hops * 30 * cosz * (5 / fMHz) ** 2);
-    const muf = 10 + 18 * cosz;   // 夜间约 10 MHz，正午约 28 MHz
+    // F2 层（决定 MUF）日落后要几个小时才衰减：取过去 4 小时内日照的衰减最大值，
+    // 避免一过日落 MUF 就骤降到夜间值、把傍晚仍可用的高频全部判为收不到
+    const ion = Math.max(cosz, 0.85*coszAgo(1), 0.7*coszAgo(2), 0.55*coszAgo(3), 0.4*coszAgo(4));
+    const muf = 10 + 18 * ion;   // 深夜约 10 MHz，正午约 28 MHz
     const mufLoss = fMHz > muf ? Math.min(40, 30 * (fMHz / muf - 1)) : 0;
     // w = 1 时与原式 104.8 + 10·log10(p) − 20·log10(d) 完全相同；w > 1 放大相对于基准的差异
     const powTerm  = 10*Math.log10(P_REF) + w * 10*Math.log10(p / P_REF);
