@@ -31,6 +31,7 @@ npx wrangler@4 rollback <version-id>
 | `tools/index.original.html` | 2026-10-26 优化前的线上原版（1.37 MB），留作参照 |
 | `tools/build.py` | 把原版转换成 2026-10-26 优化版的一次性脚本（之后的改动直接在 `public/index.html` 上做，不再经过它） |
 | `tools/verify.js` | 校验转换后的数据与原版逐条一致 |
+| `tools/import_txt.py` | 用 HFCC 的 `B??all00.TXT` 替换 `#hfdata` 里的记录 |
 
 ## index.html 的数据格式
 
@@ -40,6 +41,14 @@ npx wrangler@4 rollback <version-id>
 - `#hfland`：Natural Earth 110m 陆地轮廓，只保留几何、坐标保留 2 位小数。
 
 原版里没有被页面用到的 `ant`、`afrq`、`req`、`old` 四个字段已删除。
+
+**更新数据**：从 HFCC 下载 `b26allx2.zip`，解压后运行
+
+```bash
+python3 -I tools/import_txt.py B26all00.TXT public/index.html
+```
+
+台站、语言、国家、机构的名称沿用现有字典；出现新代码时脚本会报错列出，需先手工补进字典（台站还要经纬度）。加 `--check` 只比对、不写入。
 
 **换季更新数据**（比如 A27）：拿到新的完整记录数组（与原版 `const DATA = [...]` 同格式）后，可参照 `tools/build.py` 里打包 `packed` 的那段生成新的 `#hfdata` 块替换进去。注意 `site`/`lat`/`lon` 必须由 `loc` 唯一确定（其余三个字典同理），`build.py` 打包前应先确认这一点。
 
@@ -58,6 +67,8 @@ npx wrangler@4 rollback <version-id>
 - **2026-10-27 主瓣加权**：接收点强度估算中，天线方位角 ±45° 内加大发射功率和距离的权重（见下方模型说明）。
 - **2026-10-27 只听海外**：地图视图在中/英文按钮右侧增加“只听海外”开关，隐藏发射国家（`admname`）为 China 的电台，接收点列表同样排除。数据中 adm=China 的记录全部来自中国境内台站（含 Taipei 台站），其他国家不使用这些台站。仅地图视图显示和生效。
 - **2026-10-27 傍晚 MUF**：修正日落后 MUF 立即降到夜间值的问题（例：曼谷 13:30 UTC 收马达加斯加 BBC 21565 kHz，原模型扣 34.7 dB 直接不列出）。
+
+- **2026-10-29 数据更新**：换用 HFCC 10-29 发布的 B26all00.TXT（3114 → 3126 条）；新增 `tools/import_txt.py`。
 
 ## 接收点强度模型（`estimateField`）
 
