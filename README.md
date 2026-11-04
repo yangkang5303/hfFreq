@@ -32,6 +32,7 @@ npx wrangler@4 rollback <version-id>
 | `tools/build.py` | 把原版转换成 2026-10-26 优化版的一次性脚本（之后的改动直接在 `public/index.html` 上做，不再经过它） |
 | `tools/verify.js` | 校验转换后的数据与原版逐条一致 |
 | `tools/import_txt.py` | 用 HFCC 的 `B??all00.TXT` 替换 `#hfdata` 里的记录 |
+| `tools/import_drm.py` | 从 drm.org 时间表页面生成 `#drmdata` 块（可重复运行，见下方“DRM 数据”） |
 
 ## index.html 的数据格式
 
@@ -52,6 +53,23 @@ python3 -I tools/import_txt.py B26all00.TXT public/index.html
 
 **换季更新数据**（比如 A27）：拿到新的完整记录数组（与原版 `const DATA = [...]` 同格式）后，可参照 `tools/build.py` 里打包 `packed` 的那段生成新的 `#hfdata` 块替换进去。注意 `site`/`lat`/`lon` 必须由 `loc` 唯一确定（其余三个字典同理），`build.py` 打包前应先确认这一点。
 
+## DRM 数据（`#drmdata`）
+
+来源：drm.org 的 [DRM Broadcast Schedule](https://www.drm.org/drm-in-the-world/broadcast-schedule/)。页面里嵌了短波时间表 JSON（`<script id="drm-sw-data">`），另有印度 DRM 中波发射台表（`table2`，只有城市、频率、最大 AM 功率，**没有播出时间**）。更新方法：
+
+```bash
+mkdir -p /tmp/drm && curl -sL -o /tmp/drm/page.html https://www.drm.org/drm-in-the-world/broadcast-schedule/
+python3 -I tools/import_drm.py /tmp/drm/page.html public/index.html
+```
+
+- drm.org 条目与 HFCC 记录频率、台站相同且时间重叠时，只给该 HFCC 记录加上 drm.org 状态（`marks`）；否则作为新记录加入（`extra`，带 `src: 'drm.org'`）。
+- **匹配是按当前 `#hfdata` 算的：用 `tools/import_txt.py` 更新 HFCC 数据后，要再运行一次 `import_drm.py`**，否则已不存在的 HFCC 记录对不上、新出现的又会被当成新增重复加入。
+- **部署前先 `git pull`**：本地落后于 GitHub 时部署会把线上更新的版本覆盖掉。
+- HFCC 调制字段 `mod = N` 的记录本身就是 DRM（显示状态“HFCC 登记”）。
+- 印度中波记录的时间为空：只在“全时段”下出现，列表显示“时间未公布”；坐标是城市位置。
+- “China (DRM site unconfirmed)” 的 3 条没有台站坐标，只在列表中出现。
+- drm.org 的台站名 Qihar、Donfang 对应 HFCC 的 Qiqihar、Dongfang；Pyongyang 不在 HFCC 台站表里，坐标在脚本中手工填写。
+
 ## 变更记录
 
 - **2026-10-26 优化**：页面 1.37 MB → 485 KB；地图视图下不再生成隐藏的列表表格；首次加载只渲染一次；地图重绘合并到每帧一次；后台标签页跳过每 30 秒的刷新；增加 favicon、meta description。
@@ -67,8 +85,8 @@ python3 -I tools/import_txt.py B26all00.TXT public/index.html
 - **2026-10-27 主瓣加权**：接收点强度估算中，天线方位角 ±45° 内加大发射功率和距离的权重（见下方模型说明）。
 - **2026-10-27 只听海外**：地图视图在中/英文按钮右侧增加“只听海外”开关，隐藏发射国家（`admname`）为 China 的电台，接收点列表同样排除。数据中 adm=China 的记录全部来自中国境内台站（含 Taipei 台站），其他国家不使用这些台站。仅地图视图显示和生效。
 - **2026-10-27 傍晚 MUF**：修正日落后 MUF 立即降到夜间值的问题（例：曼谷 13:30 UTC 收马达加斯加 BBC 21565 kHz，原模型扣 34.7 dB 直接不列出）。
-
 - **2026-10-29 数据更新**：换用 HFCC 10-29 发布的 B26all00.TXT（3114 → 3126 条）；新增 `tools/import_txt.py`。
+- **2026-11-04 DRM**：导入 drm.org B26 DRM 时间表（见上方“DRM 数据”）；列表、地图悬停提示和接收点面板中 DRM 广播带紫色 “DRM” 标记，地图上有 DRM 广播的台站外加紫色圆圈；中/英文按钮右侧增加“只看 DRM”开关（列表和地图都生效）；页脚注明 drm.org 来源。
 
 ## 接收点强度模型（`estimateField`）
 
