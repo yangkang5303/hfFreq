@@ -2,7 +2,7 @@
 name = "muddy-dust-4d36"
 compatibility_date = "2026-10-01"
 workers_dev = true
-routes = [{ pattern = "sw.yink.shop", custom_domain = true }]
+routes = [{ pattern = "sw.yink.site", custom_domain = true }]
 
 [assets]
 directory = "./public"
