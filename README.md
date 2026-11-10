@@ -1,12 +1,12 @@
 # hfFreq — HF 短波频率查询
 
-线上地址：**https://sw.yink.shop**（备用：https://muddy-dust-4d36.yangkang5303.workers.dev） · 仓库：https://github.com/yangkang5303/hfFreq
+线上地址：**https://sw.yink.site**（备用：https://muddy-dust-4d36.yangkang5303.workers.dev） · 仓库：https://github.com/yangkang5303/hfFreq
 
 HFCC B26 季全球短波广播排程查询：按 UTC 时间、语言、电台筛选当前可收听的频率，并在世界地图上显示各发射台的方位角与功率。
 
 ## 部署方式
 
-Cloudflare Worker `muddy-dust-4d36`，**纯静态资源**，没有服务端代码：`public/` 下的文件原样托管。自定义域名 `sw.yink.shop` 在 `wrangler.toml` 里配置。
+Cloudflare Worker `muddy-dust-4d36`，**纯静态资源**，没有服务端代码：`public/` 下的文件原样托管。自定义域名 `sw.yink.site` 在 `wrangler.toml` 里配置。
 
 ```bash
 cd ~/coding/web/hfFreq
@@ -33,6 +33,7 @@ npx wrangler@4 rollback <version-id>
 | `tools/verify.js` | 校验转换后的数据与原版逐条一致 |
 | `tools/import_txt.py` | 用 HFCC 的 `B??all00.TXT` 替换 `#hfdata` 里的记录 |
 | `tools/import_drm.py` | 从 drm.org 时间表页面生成 `#drmdata` 块（可重复运行，见下方“DRM 数据”） |
+| `tools/import_eibi.py` | 从 EiBi 时间表生成 `#eibidata` 块，只补 HFCC/drm.org 没有的广播（见下方“EiBi 数据”） |
 
 ## index.html 的数据格式
 
@@ -65,6 +66,27 @@ python3 -I tools/import_drm.py /tmp/drm/page.html public/index.html
 - drm.org 条目与 HFCC 记录频率、台站相同且时间重叠时，只给该 HFCC 记录加上 drm.org 状态（`marks`）；否则作为新记录加入（`extra`，带 `src: 'drm.org'`）。
 - **匹配是按当前 `#hfdata` 算的：用 `tools/import_txt.py` 更新 HFCC 数据后，要再运行一次 `import_drm.py`**，否则已不存在的 HFCC 记录对不上、新出现的又会被当成新增重复加入。
 - **部署前先 `git pull`**：本地落后于 GitHub 时部署会把线上更新的版本覆盖掉。
+
+## EiBi 数据（`#eibidata`）
+
+来源：[EiBi](http://www.eibispace.de/dx/)（Eike Bierwirth 维护的全球短波时间表，免费使用、可再分发）。HFCC 只有各国登记的协调数据，EiBi 还收录了国内台、未参加协调的电台等，用来补漏。更新方法：
+
+```bash
+mkdir -p /tmp/eibi && cd /tmp/eibi
+curl -sO http://www.eibispace.de/dx/sked-b26.csv && curl -sO http://www.eibispace.de/dx/README.TXT
+cd ~/coding/web/hfFreq && python3 -I tools/import_eibi.py /tmp/eibi/sked-b26.csv /tmp/eibi/README.TXT public/index.html
+```
+
+加 `--stats` 只看统计、不写入。规则：
+
+- 只取短波 2300–26100 kHz；跳过已停用、`alt`/`harm`/`imod` 条目。
+- **跳过非广播电台**：EiBi 没有可靠的“业务电台”标记，脚本按名字识别（传真、气象、海岸/海岸警卫、海军、航空 VOLMET、数字台 Spy Numbers、信标、干扰台等），另有一份人工核对过的名单 `UTILITY_NAMES`。**换季导入时用 `--stats` 前后对比，并检查新增电台名里有没有漏掉的业务电台。**
+- **不收录的电台**：`EXCLUDE_STATIONS`（目前是 Sound of Hope，按名字前缀匹配）。
+- **去重**：HFCC 或 drm.org 已有同一频率、时间重叠、发射台相距 600 km 内（`DUP_KM`）的记录时跳过。
+- 台站坐标取自 EiBi README 的发射台表；找不到坐标的（约 70 条）只在列表中出现。
+- 语言名统一成 HFCC 的写法（如 “Spanish/Castellano” → “Spanish”，“Mandarin” → “Mandarin Chinese”），避免语言下拉出现重复项。
+- **EiBi 没有功率和天线方位**：地图上按全向、最小功率画；接收点估算按 50 kW 计算，面板里强度后加 `*`。
+- **顺序**：先 `import_txt.py`（HFCC）→ `import_drm.py` → `import_eibi.py`，因为去重依赖前两者；更新了 HFCC 或 drm.org 后要重跑 EiBi 导入。
 - HFCC 调制字段 `mod = N` 的记录本身就是 DRM（显示状态“HFCC 登记”）。
 - 印度中波记录的时间为空：只在“全时段”下出现，列表显示“时间未公布”；坐标是城市位置。
 - “China (DRM site unconfirmed)” 的 3 条没有台站坐标，只在列表中出现。
@@ -87,6 +109,7 @@ python3 -I tools/import_drm.py /tmp/drm/page.html public/index.html
 - **2026-10-27 傍晚 MUF**：修正日落后 MUF 立即降到夜间值的问题（例：曼谷 13:30 UTC 收马达加斯加 BBC 21565 kHz，原模型扣 34.7 dB 直接不列出）。
 - **2026-10-29 数据更新**：换用 HFCC 10-29 发布的 B26all00.TXT（3114 → 3126 条）；新增 `tools/import_txt.py`。
 - **2026-11-04 DRM**：导入 drm.org B26 DRM 时间表（见上方“DRM 数据”）；列表、地图悬停提示和接收点面板中 DRM 广播带紫色 “DRM” 标记，地图上有 DRM 广播的台站外加紫色圆圈；中/英文按钮右侧增加“只看 DRM”开关（列表和地图都生效）；页脚注明 drm.org 来源。
+- **2026-11-10 EiBi 补充**：导入 EiBi B26（10-31 版）中 HFCC/drm.org 没有的广播 841 条（131 个电台），数据库从 3169 条增至 4010 条；列表中注明“来源 EiBi”，页脚注明来源。按要求不收录 Sound of Hope（含 Sound of Hope-RFA，约 1600 条）。
 
 ## 接收点强度模型（`estimateField`）
 
