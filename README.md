@@ -34,6 +34,8 @@ npx wrangler@4 rollback <version-id>
 | `tools/import_txt.py` | 用 HFCC 的 `B??all00.TXT` 替换 `#hfdata` 里的记录 |
 | `tools/import_drm.py` | 从 drm.org 时间表页面生成 `#drmdata` 块（可重复运行，见下方“DRM 数据”） |
 | `tools/import_eibi.py` | 从 EiBi 时间表生成 `#eibidata` 块，只补 HFCC/drm.org 没有的广播（见下方“EiBi 数据”） |
+| `tools/i18n/zh_names.json` | 语言、国家、电台、台站名称的中文对照表（见下方“中英文界面”） |
+| `tools/build_i18n.py` | 把中文对照表嵌入 `#zhnames`，并列出还没翻译的名称 |
 
 ## index.html 的数据格式
 
@@ -86,7 +88,18 @@ cd ~/coding/web/hfFreq && python3 -I tools/import_eibi.py /tmp/eibi/sked-b26.csv
 - 台站坐标取自 EiBi README 的发射台表；找不到坐标的（约 70 条）只在列表中出现。
 - 语言名统一成 HFCC 的写法（如 “Spanish/Castellano” → “Spanish”，“Mandarin” → “Mandarin Chinese”），避免语言下拉出现重复项。
 - **EiBi 没有功率和天线方位**：地图上按全向、最小功率画；接收点估算按 50 kW 计算，面板里强度后加 `*`。
-- **顺序**：先 `import_txt.py`（HFCC）→ `import_drm.py` → `import_eibi.py`，因为去重依赖前两者；更新了 HFCC 或 drm.org 后要重跑 EiBi 导入。
+- **顺序**：先 `import_txt.py`（HFCC）→ `import_drm.py` → `import_eibi.py` → `build_i18n.py`，因为去重依赖前两者；更新了 HFCC 或 drm.org 后要重跑 EiBi 导入，最后都要重跑 `build_i18n.py`。
+
+## 中英文界面
+
+- 右上角按钮切换中文 / English，选择保存在浏览器 `localStorage`（`hf.uiLang`）；首次访问按浏览器语言决定。
+- 界面文字在 `index.html` 的 `I18N` 表（`zh` / `en` 两套），静态元素用 `data-i18n` / `data-i18n-title` / `data-i18n-ph` / `data-i18n-aria` 标记。
+- 数据名称（语言、国家、电台、台站）的中文对照在 `tools/i18n/zh_names.json`：
+  - 语言、国家：以 Unicode CLDR（浏览器/操作系统通用的本地化数据，经 ICU 取得）为准，人工修正了几处（HFCC 的 `Chn` 被 ISO 当成奇努克语、“Mandarin Chinese”→普通话等）。
+  - 电台、台站：人工翻译，电台用官方中文名（中国国际广播电台、美国之音、朝鲜之声…），地名用通行译名。小型私营台、海盗台等没有通行中文名的保留原文。
+  - 覆盖率（按记录）：语言 100%、国家 100%、电台约 93%、台站 100%。
+- 中文名称也写进了搜索索引，中英文界面下都能用中文搜（如“美国之音”“普通话”“喀什”）。
+- **导入新数据后运行** `python3 -I tools/build_i18n.py public/index.html`：它会列出新出现、还没有中文的名称，补进 `zh_names.json` 后再运行一次。
 - HFCC 调制字段 `mod = N` 的记录本身就是 DRM（显示状态“HFCC 登记”）。
 - 印度中波记录的时间为空：只在“全时段”下出现，列表显示“时间未公布”；坐标是城市位置。
 - “China (DRM site unconfirmed)” 的 3 条没有台站坐标，只在列表中出现。
@@ -110,6 +123,8 @@ cd ~/coding/web/hfFreq && python3 -I tools/import_eibi.py /tmp/eibi/sked-b26.csv
 - **2026-10-29 数据更新**：换用 HFCC 10-29 发布的 B26all00.TXT（3114 → 3126 条）；新增 `tools/import_txt.py`。
 - **2026-11-04 DRM**：导入 drm.org B26 DRM 时间表（见上方“DRM 数据”）；列表、地图悬停提示和接收点面板中 DRM 广播带紫色 “DRM” 标记，地图上有 DRM 广播的台站外加紫色圆圈；中/英文按钮右侧增加“只看 DRM”开关（列表和地图都生效）；页脚注明 drm.org 来源。
 - **2026-11-10 EiBi 补充**：导入 EiBi B26（10-31 版）中 HFCC/drm.org 没有的广播 841 条（131 个电台），数据库从 3169 条增至 4010 条；列表中注明“来源 EiBi”，页脚注明来源。按要求不收录 Sound of Hope（含 Sound of Hope-RFA，约 1600 条）。
+- **2026-11-10 中英文界面**：增加中文 / English 切换（见上方“中英文界面”）；接收点面板改为表格：每行一个电台，第二列按频率递增紧凑列出该台此刻可收的全部频率，强/极强用粗体、良好常规、一般/微弱斜体，鼠标悬停看详情；面板加宽到 560 px。
+- **2026-11-10 滚动修复**：“当前可收听”模式每 30 秒自动刷新时会重建接收列表和频率列表，浏览到下面时被拉回首行；现在内容没变就不重绘，变了也保留滚动位置。
 
 ## 接收点强度模型（`estimateField`）
 
