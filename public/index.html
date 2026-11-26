@@ -4,219 +4,346 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="HFCC B26 季全球短波广播频率查询：按 UTC 时间、语言、电台筛选当前可收听的频率，并在世界地图上查看发射方位与功率。">
-<meta name="theme-color" content="#0f1419">
+<meta name="theme-color" content="#f6f8fa">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%F0%9F%93%BB%3C/text%3E%3C/svg%3E">
 <title data-i18n="docTitle">HF 短波频率查询 · B26</title>
 <style>
   :root{
-    --bg:#0f1419; --panel:#1a2129; --panel2:#212a34; --border:#2d3947;
-    --text:#e6edf3; --muted:#8b98a5; --accent:#3fb950; --accent2:#58a6ff;
-    --warn:#d29922;
+    --bg:#f6f8fa; --panel:#ffffff; --panel2:#eef2f6; --border:#d0d7de; --border-soft:rgba(208,215,222,.72);
+    --text:#1f2328; --muted:#59636e; --muted2:#6e7781;
+    --accent:#1a7f37; --accent-soft:rgba(26,127,55,.1); --accent-border:rgba(26,127,55,.45);
+    --accent2:#0969da; --accent2-soft:rgba(9,105,218,.1); --accent-on:#ffffff;
+    --warn:#9a6700; --drm:#8250df; --drm-text:#6639ba; --drm-bg:rgba(130,80,223,.1); --drm-border:rgba(130,80,223,.45);
+    --header-bg:linear-gradient(180deg,#ffffff,#f8fafc); --header-shadow:0 1px 10px rgba(31,35,40,.06);
+    --float-bg:rgba(255,255,255,.94); --float-border:rgba(175,184,193,.85); --float-shadow:0 6px 22px rgba(31,35,40,.14);
+    --knob-all:#6e7781; --hover-row:rgba(9,105,218,.05); --preset-bg:#f6f8fa;
+    --toast-bg:rgba(31,35,40,.92); --toast-text:#ffffff;
+  }
+  body.theme-dark{
+    --bg:#0d1117; --panel:#161d26; --panel2:#1f2936; --border:#2b3847; --border-soft:rgba(45,57,71,.55);
+    --text:#e6edf3; --muted:#8b98a5; --muted2:#768594;
+    --accent:#3fb950; --accent-soft:rgba(63,185,80,.14); --accent-border:rgba(63,185,80,.55);
+    --accent2:#58a6ff; --accent2-soft:rgba(88,166,255,.16); --accent-on:#04121f;
+    --warn:#d29922; --drm:#8957e5; --drm-text:#c4a5ff; --drm-bg:rgba(137,87,229,.2); --drm-border:rgba(137,87,229,.7);
+    --header-bg:linear-gradient(180deg,#121821,#161d26); --header-shadow:0 2px 14px rgba(0,0,0,.42);
+    --float-bg:rgba(13,17,23,.93); --float-border:rgba(72,88,108,.7); --float-shadow:0 8px 28px rgba(0,0,0,.6);
+    --knob-all:#3b4654; --hover-row:rgba(88,166,255,.06); --preset-bg:rgba(31,41,54,.45);
+    --toast-bg:rgba(15,20,27,.95); --toast-text:#e6edf3;
   }
   *{box-sizing:border-box}
-  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue","PingFang SC","Microsoft YaHei",sans-serif;
+  html,body{height:100%}
+  body{margin:0;min-height:100vh;display:flex;flex-direction:column;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue","PingFang SC","Microsoft YaHei",sans-serif;
     background:var(--bg);color:var(--text);font-size:14px;line-height:1.5}
-  header{position:sticky;top:0;z-index:20;background:linear-gradient(180deg,#141b22,#1a2129);
-    border-bottom:1px solid var(--border);padding:14px 18px;box-shadow:0 2px 12px rgba(0,0,0,.4)}
-  h1{margin:0 0 2px;font-size:19px;font-weight:600}
-  h1 .tag{font-size:12px;font-weight:500;color:var(--accent);border:1px solid var(--accent);
-    border-radius:4px;padding:1px 6px;margin-left:8px;vertical-align:middle}
-  .headtop{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
-  .headbtns{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-  #collapsebtn{width:34px;height:34px;padding:0;font-size:13px;line-height:1}
-  /* 收起面板时只保留中/英文快捷按钮 */
-  body.top-hidden header .controls > :not(.langtoggles):not(#nocn):not(#drmbtn),
-  body.top-hidden .tabs{display:none!important}
-  /* 地图视图不显示搜索框和语言下拉（地图视图下也不按它们过滤） */
-  body.view-map #q,
-  body.view-map #langsel{display:none!important}
-  /* “只听海外”只在地图视图显示 */
-  body:not(.view-map) #nocn{display:none!important}
-  #nocn{white-space:nowrap;font-size:13px}
+  header{position:sticky;top:0;z-index:20;background:var(--header-bg);
+    border-bottom:1px solid var(--border);padding:10px 18px;box-shadow:var(--header-shadow)}
+  .headtop{display:flex;align-items:center;justify-content:space-between;gap:10px 14px;flex-wrap:wrap}
+  .headleft{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  h1{margin:0;font-size:18px;font-weight:600;display:flex;align-items:center;flex-wrap:wrap;gap:6px;color:var(--text)}
+  h1 .tag{font-size:11.5px;font-weight:600;color:var(--accent);border:1px solid var(--accent-border);
+    background:var(--accent-soft);border-radius:4px;padding:1px 6px}
+  .headbtns{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  #collapsebtn,#themebtn{width:34px;height:32px;padding:0;font-size:13.5px;line-height:1;display:inline-flex;align-items:center;justify-content:center}
+  #uilang{height:32px;padding:0 10px;font-size:12.5px;font-weight:500}
+
+  /* ---- view tabs (内嵌在顶栏，节省纵向空间；折叠时保留) ---- */
+  .tabs{display:inline-flex;gap:2px;background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:2px}
+  .tabs button{background:transparent;border:0;color:var(--muted);
+    padding:5px 12px;border-radius:6px;font-size:13px;white-space:nowrap}
+  .tabs button:hover{color:var(--text)}
+  .tabs button.active{background:var(--accent2);color:var(--accent-on);font-weight:600}
+
+  /* 收起筛选面板时：保留标题 + 主视图切换 + 中英文/DRM/海外快捷按钮，隐藏次级筛选 */
+  body.top-hidden header .controls > :not(.langtoggles):not(#nocn):not(#drmbtn){display:none!important}
   body.top-hidden header .controls{margin-top:8px}
+
   input:disabled{opacity:.5;cursor:not-allowed}
-  .controls{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;align-items:center}
+  .controls{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;align-items:center}
   input,select,button{font:inherit;background:var(--panel);color:var(--text);
-    border:1px solid var(--border);border-radius:7px;padding:7px 10px;outline:none}
-  input:focus,select:focus{border-color:var(--accent2);box-shadow:0 0 0 2px rgba(88,166,255,.2)}
-  #q{flex:0 1 260px;min-width:0;background:#fff;color:#0f1419}
-  #q::placeholder{color:#8b98a5}
-  .ctrl-grp{display:flex;align-items:center;gap:6px;background:var(--panel);
-    border:1px solid var(--border);border-radius:7px;padding:4px 8px}
-  .ctrl-grp label{color:var(--muted);font-size:12px;white-space:nowrap}
-  .ctrl-grp input[type=number]{width:64px;background:var(--panel2);padding:3px 6px}
+    border:1px solid var(--border);border-radius:7px;padding:6px 10px;outline:none}
+  input:focus,select:focus{border-color:var(--accent2);box-shadow:0 0 0 2px var(--accent2-soft)}
+
+  /* 统一搜索框 + 一键清空 */
+  .searchbox{position:relative;flex:1 1 210px;max-width:290px;min-width:165px;display:flex;align-items:center}
+  #q{width:100%;background:var(--panel);color:var(--text);padding-right:28px;border-color:var(--border)}
+  body.theme-dark #q{background:var(--panel2)}
+  #q::placeholder{color:var(--muted2)}
+  .search-clear{position:absolute;right:5px;width:20px;height:20px;padding:0;border:0;border-radius:50%;
+    background:var(--panel2);color:var(--muted);font-size:11px;line-height:1;
+    display:none;align-items:center;justify-content:center;cursor:pointer}
+  .search-clear.show{display:inline-flex}
+  .search-clear:hover{color:var(--text);background:var(--border)}
+
+  .ctrl-grp{display:flex;align-items:center;gap:5px;background:var(--panel);
+    border:1px solid var(--border);border-radius:7px;padding:3px 8px}
+  .ctrl-grp label{color:var(--muted);font-size:12px;font-weight:500;white-space:nowrap}
+  .ctrl-grp input[type=number]{width:52px;background:var(--panel2);padding:3px 5px;text-align:center;
+    font-variant-numeric:tabular-nums;border-color:transparent}
+  .ctrl-grp input[type=number]:focus{background:var(--panel);border-color:var(--accent2)}
+  .local-time{color:var(--muted);font-size:11.5px;white-space:nowrap;padding-left:6px;margin-left:2px;
+    border-left:1px solid var(--border);font-variant-numeric:tabular-nums}
+
   button{cursor:pointer;transition:.15s}
   button:hover{border-color:var(--accent2)}
-  button.primary{background:var(--accent);color:#06210f;border-color:var(--accent);font-weight:600}
-  button.primary:hover{filter:brightness(1.1)}
-  button.on{background:var(--accent2);color:#04121f;border-color:var(--accent2);font-weight:600}
+  button.primary{background:var(--accent);color:var(--accent-on);border-color:var(--accent);font-weight:600}
+  button.primary:hover{filter:brightness(1.06)}
+  button.on{background:var(--accent2);color:var(--accent-on);border-color:var(--accent2);font-weight:600}
+
   /* 时间筛选三档开关：左 全时段 / 中 指定时刻 / 右 当前可收听 */
-  .mode3{position:relative;display:grid;grid-template-columns:repeat(3,1fr);width:17.5em;flex:0 0 auto;
-    background:var(--panel);border:1px solid var(--border);border-radius:7px;padding:2px}
+  .mode3{position:relative;display:grid;grid-template-columns:repeat(3,1fr);width:17.2em;flex:0 0 auto;
+    background:var(--panel2);border:1px solid var(--border);border-radius:7px;padding:2px}
   .mode3 .knob{position:absolute;top:2px;bottom:2px;left:2px;width:calc((100% - 4px) / 3);border-radius:5px;
-    background:#3b4654;transition:transform .18s ease,background .18s}
+    background:var(--knob-all);transition:transform .18s ease,background .18s}
   .mode3[data-mode="at"] .knob{transform:translateX(100%);background:var(--accent2)}
   .mode3[data-mode="now"] .knob{transform:translateX(200%);background:var(--accent)}
   .mode3 button{position:relative;z-index:1;border:0;background:transparent;border-radius:5px;
     padding:5px 0;color:var(--muted);font-size:12.5px;white-space:nowrap}
-  .mode3 button[aria-checked="true"]{color:var(--text);font-weight:600}
-  .mode3[data-mode="at"] button[aria-checked="true"],
-  .mode3[data-mode="now"] button[aria-checked="true"]{color:#04121f}
+  .mode3 button[aria-checked="true"]{color:#ffffff;font-weight:600}
+  body.theme-dark .mode3[data-mode="at"] button[aria-checked="true"],
+  body.theme-dark .mode3[data-mode="now"] button[aria-checked="true"]{color:#04121f}
+
   .langtoggles{display:flex;align-items:center;gap:0;background:var(--panel);
     border:1px solid var(--border);border-radius:7px;overflow:hidden;padding:0}
-  .langtoggles button{border:0;border-radius:0;background:transparent;padding:7px 12px;
+  .langtoggles button{border:0;border-radius:0;background:transparent;padding:6px 11px;
     color:var(--muted);font-size:13px;white-space:nowrap}
+  .langtoggles button:hover{color:var(--text)}
   .langtoggles button + button{border-left:1px solid var(--border)}
-  .langtoggles button.on{background:var(--accent2);color:#04121f;font-weight:600}
+  .langtoggles button.on{background:var(--accent2);color:var(--accent-on);font-weight:600}
+  #drmbtn,#nocn{white-space:nowrap;font-size:13px}
+  #drmbtn.on{background:var(--drm);border-color:var(--drm);color:#fff}
+  #langsel{max-width:170px;background:var(--panel);font-size:13px}
+  body.theme-dark #langsel{background:var(--panel2)}
+
+  main{flex:1 1 auto;padding:12px 18px 10px;display:flex;flex-direction:column;min-height:0}
+  #mapview{flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
+
   .stats{color:var(--muted);font-size:12.5px;display:flex;gap:4px 16px;flex-wrap:wrap}
   .stats b{color:var(--text)}
-  main{padding:16px 18px 12px}
-  footer{border-top:1px solid var(--border);padding:12px 18px calc(14px + env(safe-area-inset-bottom, 0px));
+  footer{flex:0 0 auto;border-top:1px solid var(--border);padding:10px 18px calc(12px + env(safe-area-inset-bottom, 0px));
     display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 20px;
-    color:var(--muted);font-size:12.5px}
+    color:var(--muted);font-size:12.5px;background:var(--panel)}
   .footlinks{display:flex;gap:14px;flex-wrap:wrap}
   footer a{color:var(--accent2);text-decoration:none}
   footer a:hover{text-decoration:underline}
-  .bandgroup{margin-bottom:22px}
+
+  /* ---- list view ---- */
+  .listbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
+    margin-bottom:10px;padding:6px 12px;background:var(--panel);border:1px solid var(--border);border-radius:8px;
+    font-size:12.5px;color:var(--muted)}
+  .listbar-btns{display:flex;gap:6px}
+  .listbar-btns button{padding:3px 10px;font-size:12px;background:var(--panel2)}
+  .bandgroup{margin-bottom:14px}
   .bandgroup h2{font-size:14px;margin:0 0 8px;color:var(--accent2);font-weight:600;
     display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;
-    border-radius:6px;padding:2px 4px;transition:background .12s}
-  .bandgroup h2:hover{background:var(--panel2)}
-  .bandgroup h2 .cnt{font-size:11px;color:var(--muted);font-weight:400}
+    border-radius:8px;padding:7px 12px;background:var(--panel);border:1px solid var(--border);transition:background .12s,border-color .12s}
+  .bandgroup h2:hover{background:var(--panel2);border-color:var(--accent2)}
+  .bandgroup h2 .cnt{font-size:11.5px;color:var(--muted);font-weight:400;margin-left:auto}
   .bandgroup h2 .chev{display:inline-block;width:12px;color:var(--muted);
     font-size:11px;flex:0 0 auto;transition:transform .15s}
   .bandgroup.collapsed h2{margin-bottom:0}
-  .bandgroup.collapsed table{display:none}
-  table{width:100%;border-collapse:collapse;background:var(--panel);border-radius:9px;overflow:hidden}
+  .bandgroup.collapsed .tbl-wrap{display:none}
+  .tbl-wrap{width:100%;overflow-x:auto;border-radius:9px;border:1px solid var(--border);background:var(--panel)}
+  table{width:100%;border-collapse:collapse;background:var(--panel)}
   thead th{background:var(--panel2);color:var(--muted);font-size:11.5px;text-transform:uppercase;
-    letter-spacing:.4px;padding:8px 9px;text-align:left;position:sticky;top:0;
+    letter-spacing:.4px;padding:8px 9px;text-align:left;
     border-bottom:1px solid var(--border);white-space:nowrap}
-  tbody td{padding:7px 9px;border-bottom:1px solid rgba(45,57,71,.55);vertical-align:top}
-  tbody tr:hover{background:var(--panel2)}
+  tbody td{padding:7px 9px;border-bottom:1px solid var(--border-soft);vertical-align:top}
+  tbody tr:last-child td{border-bottom:0}
+  tbody tr:hover{background:var(--hover-row)}
   .freq{font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .freq-btn{cursor:pointer;border-radius:4px;padding:1px 4px;margin-left:-4px;transition:background .12s}
+  .freq-btn:hover{background:var(--accent-soft);text-decoration:underline}
   .time{font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--text)}
   .lang{white-space:nowrap}
   .lang small{color:var(--muted)}
-  .brc{white-space:nowrap}
+  .brc{max-width:260px}
   .brc small{display:block;color:var(--muted);font-size:11px}
+  .site{max-width:220px}
+  .site-row{display:flex;align-items:flex-start;justify-content:space-between;gap:6px}
   .site small{display:block;color:var(--muted);font-size:11px}
-  .badge{display:inline-block;font-size:10.5px;border-radius:4px;padding:1px 6px;margin-left:5px}
-  .b-now{background:rgba(63,185,80,.18);color:var(--accent);border:1px solid rgba(63,185,80,.5)}
-  .b-mod{background:rgba(210,153,34,.15);color:var(--warn);border:1px solid rgba(210,153,34,.4)}
-  .b-drm{background:rgba(137,87,229,.2);color:#c4a5ff;border:1px solid rgba(137,87,229,.7);font-weight:600}
-  .pp-drm{font-style:normal;font-size:8px;font-weight:700;color:#c4a5ff;margin-left:1px;vertical-align:super;letter-spacing:-.2px}
-  #drmbtn{white-space:nowrap;font-size:13px}
-  #drmbtn.on{background:#8957e5;border-color:#8957e5;color:#fff}
-  .notes{color:var(--muted);font-size:12px}
+  .loc-btn{flex:0 0 auto;padding:2px 6px;font-size:11.5px;line-height:1.2;border-radius:5px;
+    background:var(--panel2);border:1px solid var(--border);color:var(--accent2)}
+  .loc-btn:hover{background:var(--accent2-soft);border-color:var(--accent2)}
+  .badge{display:inline-block;font-size:10.5px;border-radius:4px;padding:1px 5px;margin-left:5px}
+  .b-now{background:var(--accent-soft);color:var(--accent);border:1px solid var(--accent-border);font-weight:500}
+  .b-mod{background:rgba(210,153,34,.14);color:var(--warn);border:1px solid rgba(210,153,34,.4)}
+  .b-drm{background:var(--drm-bg);color:var(--drm-text);border:1px solid var(--drm-border);font-weight:600}
+  .pp-drm{font-style:normal;font-size:8px;font-weight:700;color:var(--drm-text);margin-left:1px;vertical-align:super;letter-spacing:-.2px}
+  .notes{color:var(--muted);font-size:12px;max-width:220px}
   .empty{text-align:center;color:var(--muted);padding:60px 20px}
   .empty .big{font-size:40px;margin-bottom:10px}
-  .nowtog{display:flex;align-items:center;gap:6px}
-  .nowtog input{accent-color:var(--accent)}
-
-  /* ---- view tabs ---- */
-  .tabs{display:flex;gap:6px;margin-top:10px}
-  .tabs button{background:var(--panel);border:1px solid var(--border);color:var(--muted);
-    padding:6px 16px;border-radius:7px;font-size:13px}
-  .tabs button.active{background:var(--accent2);border-color:var(--accent2);color:#04121f;font-weight:600}
 
   /* ---- map ---- */
-  .mapwrap{background:var(--panel);border:1px solid var(--border);border-radius:10px;
-    overflow:hidden;position:relative}
-  #map{display:block;width:100%;height:auto;cursor:grab;touch-action:none}
+  .mapwrap{flex:1 1 auto;background:var(--panel);border:1px solid var(--border);border-radius:10px;
+    overflow:hidden;position:relative;min-height:340px;box-shadow:0 1px 4px rgba(31,35,40,.06)}
+  #map{display:block;width:100%;height:100%;cursor:grab;touch-action:none}
   #map.dragging{cursor:grabbing}
   #map.over-sun{cursor:ew-resize}
-  .mapctrl{position:absolute;top:10px;right:10px;display:flex;flex-direction:column;gap:6px;z-index:5}
-  .mapctrl button{width:34px;height:34px;padding:0;font-size:16px;line-height:1;
-    background:rgba(26,33,41,.9);backdrop-filter:blur(4px)}
+  #map.over-site{cursor:pointer}
+  .mapctrl{position:absolute;top:10px;right:10px;display:flex;flex-direction:column;align-items:flex-end;gap:6px;z-index:5}
+  .mapctrl-grp{display:flex;flex-direction:column;width:34px;background:var(--float-bg);backdrop-filter:blur(8px);
+    border:1px solid var(--float-border);border-radius:8px;overflow:hidden;box-shadow:var(--float-shadow)}
+  .mapctrl button{width:34px;height:34px;padding:0;font-size:15px;line-height:1;border:0;border-radius:0;
+    background:transparent;color:var(--text);display:inline-flex;align-items:center;justify-content:center}
+  .mapctrl button + button{border-top:1px solid var(--border-soft)}
+  .mapctrl button:hover{background:var(--accent2-soft);color:var(--accent2)}
+  .mapctrl button.active{background:var(--accent2-soft);color:var(--accent2);font-weight:600}
+  .mapctrl .probe-pill{width:auto;min-width:34px;height:34px;padding:0 10px;gap:5px;font-size:12.5px;font-weight:500;
+    border-radius:8px;background:var(--float-bg);backdrop-filter:blur(8px);
+    border:1px solid var(--accent2);color:var(--text);box-shadow:var(--float-shadow);white-space:nowrap}
+  .mapctrl .probe-pill:hover{background:var(--accent2-soft);border-color:var(--accent2);color:var(--accent2)}
+  .mapctrl .probe-pill.active{background:var(--accent2);color:var(--accent-on);border-color:var(--accent2);font-weight:600}
+
   .maplegend{position:absolute;left:12px;bottom:12px;z-index:5;
-    background:rgba(15,20,25,.82);backdrop-filter:blur(6px);border:1px solid var(--border);
-    border-radius:8px;padding:10px 13px;font-size:11.5px;color:var(--muted);max-width:270px}
-  .maplegend .row{display:flex;align-items:center;gap:8px;margin:3px 0}
+    background:var(--float-bg);backdrop-filter:blur(8px);border:1px solid var(--float-border);
+    border-radius:9px;padding:10px 13px;font-size:11.5px;color:var(--muted);max-width:275px;
+    box-shadow:var(--float-shadow)}
+  .maplegend[hidden]{display:none}
+  .maplegend-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+  .maplegend-head span{color:var(--text);font-weight:600;font-size:12px}
+  .maplegend-head button{width:22px;height:22px;padding:0;font-size:11px;background:transparent;border-color:transparent;color:var(--muted)}
+  .maplegend-head button:hover{color:var(--text);border-color:var(--border)}
+  .maplegend .row{display:flex;align-items:center;gap:8px;margin:4px 0}
   .maplegend .row svg{flex:0 0 auto}
   .maplegend b{color:var(--text);font-weight:600}
-  .maplegend .hint{margin-top:6px;font-size:11px;color:#6b7684;line-height:1.45}
+  .maplegend .hint{margin-top:7px;font-size:11px;color:var(--muted2);line-height:1.48;border-top:1px solid var(--border-soft);padding-top:6px}
+
   .maptip{position:absolute;z-index:9;pointer-events:none;
-    max-width:calc(100vw - 24px);
-    background:rgba(15,20,25,.97);border:1px solid var(--accent2);border-radius:8px;
-    padding:10px 14px;font-size:12px;color:var(--text);box-shadow:0 6px 24px rgba(0,0,0,.6);
-    opacity:0;transition:opacity .1s;white-space:nowrap}
+    max-width:min(540px,calc(100% - 20px));max-height:calc(100% - 24px);overflow:auto;
+    background:var(--float-bg);backdrop-filter:blur(8px);border:1px solid var(--accent2);border-radius:9px;
+    padding:10px 13px;font-size:12px;color:var(--text);box-shadow:var(--float-shadow);
+    opacity:0;transition:opacity .1s}
   .maptip.show{opacity:1}
-  .maptip .t-site{font-weight:700;color:var(--accent2);margin-bottom:3px;white-space:nowrap}
-  .maptip .t-meta{color:var(--muted);font-size:11px;margin-bottom:6px;white-space:nowrap}
-  .maptip .t-freq{font-weight:700;color:var(--accent)}
-  .maptip table{background:none;border:0;border-collapse:collapse;width:max-content;max-width:none}
-  .maptip td{padding:1px 10px 1px 0;font-size:11.5px;border:0;white-space:nowrap}
-  .maptip th{white-space:nowrap;padding:0 10px 3px 0;font-size:10.5px;color:var(--muted);
+  .maptip.pinned{pointer-events:auto}
+  .maptip-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+  .maptip .t-site{font-weight:700;color:var(--accent2);margin-bottom:2px}
+  .maptip .t-meta{color:var(--muted);font-size:11px;margin-bottom:7px}
+  .maptip .t-close{display:none;width:24px;height:24px;padding:0;font-size:12px;line-height:1;flex:0 0 auto;background:var(--panel2)}
+  .maptip.pinned .t-close{display:inline-flex;align-items:center;justify-content:center}
+  .maptip .t-freq{font-weight:700;color:var(--accent);cursor:pointer}
+  .maptip .t-freq:hover{text-decoration:underline}
+  .maptip table{background:none;border:0;border-collapse:collapse;width:100%}
+  .maptip td{padding:2px 9px 2px 0;font-size:11.5px;border:0;white-space:nowrap}
+  .maptip th{white-space:nowrap;padding:0 9px 4px 0;font-size:10.5px;color:var(--muted);
     font-weight:600;text-align:left;border-bottom:1px solid var(--border);text-transform:none;letter-spacing:0}
   .maptip td:last-child,.maptip th:last-child{padding-right:0}
-  .maptip td.k{color:var(--muted);white-space:nowrap}
-  .maptip .more{color:var(--muted);font-size:11px;margin-top:4px;white-space:nowrap}
+  .maptip .more{color:var(--muted);font-size:11px;margin-top:4px;padding-top:4px}
+  .maptip .t-hint{color:var(--muted2);font-size:10.5px;margin-top:5px}
 
-  /* ---- 接收点（拖动 📻 到地图） ---- */
-  #probebtn{font-size:17px;touch-action:none;cursor:grab}
+  /* ---- 接收点（拖动 📻 或点击放图钉） ---- */
+  #probebtn{touch-action:none;cursor:grab}
   .probe-ghost{position:fixed;z-index:1000;pointer-events:none;font-size:30px;line-height:1;
-    transform:translate(-50%,-115%);filter:drop-shadow(0 3px 6px rgba(0,0,0,.6));opacity:0}
+    transform:translate(-50%,-115%);filter:drop-shadow(0 3px 6px rgba(0,0,0,.35));opacity:0}
   .probe-ghost.show{opacity:1}
   .probe-ghost::after{content:"";position:absolute;left:50%;bottom:-9px;width:8px;height:8px;margin-left:-4px;
-    border-radius:50%;background:var(--accent2);box-shadow:0 0 0 3px rgba(88,166,255,.35)}
-  .probepanel{position:absolute;z-index:6;top:10px;left:10px;width:min(560px,calc(100% - 64px));
+    border-radius:50%;background:var(--accent2);box-shadow:0 0 0 3px rgba(9,105,218,.3)}
+  .probepanel{position:absolute;z-index:6;top:10px;left:10px;width:min(540px,calc(100% - 108px));
     max-height:calc(100% - 20px);display:flex;flex-direction:column;
-    background:rgba(15,20,25,.95);backdrop-filter:blur(6px);border:1px solid var(--accent2);border-radius:9px;
-    box-shadow:0 6px 24px rgba(0,0,0,.55);font-size:12px}
+    background:var(--float-bg);backdrop-filter:blur(8px);border:1px solid var(--accent2);border-radius:9px;
+    box-shadow:var(--float-shadow);font-size:12px}
   .probepanel[hidden]{display:none}
   .pp-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;
     padding:9px 10px 7px 12px;border-bottom:1px solid var(--border)}
-  .pp-title{font-weight:700;color:var(--accent2)}
-  .pp-meta{color:var(--muted);font-size:11px}
+  .pp-title{font-weight:700;color:var(--accent2);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .pp-meta{color:var(--muted);font-size:11px;margin-top:1px}
   .pp-meta b{color:var(--text)}
-  .pp-close{width:26px;height:26px;padding:0;font-size:12px;line-height:1;flex:0 0 auto}
+  .pp-close{width:26px;height:26px;padding:0;font-size:12px;line-height:1;flex:0 0 auto;background:var(--panel2)}
+  .pp-presets{display:flex;align-items:center;gap:4px;flex-wrap:wrap;padding:6px 12px;
+    border-bottom:1px solid var(--border-soft);background:var(--preset-bg)}
+  .pp-presets button{padding:2px 7px;font-size:11px;border-radius:5px;background:var(--panel);border-color:var(--border);color:var(--muted)}
+  .pp-presets button:hover{color:var(--text);border-color:var(--accent2)}
+  .pp-presets button.geo{color:var(--accent);border-color:var(--accent-border)}
   .pp-list{overflow-y:auto;flex:1 1 auto;min-height:0}
   .pp-key{color:var(--muted);font-size:10.5px;margin-top:2px}
   .pp-key b,.pp-key i{color:var(--text)}
   .pp-tbl{width:100%;border-collapse:collapse;background:none;border-radius:0;font-size:12px}
-  .pp-tbl td{padding:5px 8px 5px 12px;border-bottom:1px solid rgba(45,57,71,.5);vertical-align:top}
+  .pp-tbl td{padding:5px 8px 5px 12px;border-bottom:1px solid var(--border-soft);vertical-align:top}
   .pp-b{width:38%;font-weight:600;color:var(--text)}
   .pp-b small{display:block;font-weight:400;color:var(--muted);font-size:10.5px}
   .pp-fs{color:var(--text);font-variant-numeric:tabular-nums;line-height:1.7;padding-left:4px!important}
-  .pp-fs span{display:inline-block;margin-right:7px;white-space:nowrap;cursor:default}
-  .pp-fs .pp-s{font-weight:700;color:#fff}
+  .pp-fs span{display:inline-block;margin-right:7px;white-space:nowrap;cursor:pointer;border-radius:3px;padding:0 2px}
+  .pp-fs span:hover{background:var(--accent2-soft)}
+  .pp-fs .pp-s{font-weight:700;color:var(--text)}
   .pp-fs .pp-w{font-style:italic;color:var(--muted)}
   .pp-empty,.pp-more{color:var(--muted);padding:10px 12px}
-  .pp-note{color:#6b7684;font-size:10.5px;padding:6px 12px 8px;border-top:1px solid var(--border)}
+  .pp-note{color:var(--muted2);font-size:10.5px;padding:6px 12px 8px;border-top:1px solid var(--border)}
 
-  @media(max-width:820px){
+  /* ---- Toast 轻提示 ---- */
+  .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(10px);z-index:2000;
+    background:var(--toast-bg);color:var(--toast-text);border:1px solid var(--accent);border-radius:8px;
+    padding:7px 14px;font-size:12.5px;box-shadow:0 6px 20px rgba(0,0,0,.28);
+    opacity:0;pointer-events:none;transition:opacity .18s,transform .18s}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  @media(max-width:960px){
     .col-pow,.col-az,.col-ant,.col-days,.col-date,.col-ciraf{display:none}
-    #q{flex:1 1 150px}
+  }
+  @media(max-width:820px){
     header{padding:9px 11px}
     h1{font-size:16px}
+    .searchbox{flex:1 1 160px;max-width:none}
+    .local-time{display:none}
     main{padding:8px 8px 10px}
-    footer{padding:10px 11px calc(12px + env(safe-area-inset-bottom, 0px))}
-    .mapwrap{border-radius:8px}
-    .probepanel{top:auto;bottom:8px;left:8px;width:calc(100% - 60px);max-height:58%}
-    .pp-note{display:none}   /* 手机上省空间；标题里已注明“估算” */
+    footer{padding:9px 11px calc(11px + env(safe-area-inset-bottom, 0px))}
+    .mapwrap{border-radius:8px;min-height:280px}
+    .mapctrl .probe-pill .p-txt{display:none}
+    .mapctrl .probe-pill{padding:0;width:34px}
+    .probepanel{top:auto;bottom:8px;left:8px;width:calc(100% - 56px);max-height:60%}
+    .pp-note{display:none}
+    .maplegend{max-width:230px;font-size:11px;padding:8px 10px}
+  }
+  /* ---- 手机端频率列表改为卡片布局，彻底消除横向溢出 ---- */
+  @media(max-width:680px){
+    .searchbox{flex:1 1 100%}
+    .tbl-wrap{overflow-x:visible;border:0;background:transparent}
+    .bandgroup table,.bandgroup tbody{display:block;width:100%;background:transparent}
+    .bandgroup thead{display:none}
+    .bandgroup tbody tr{display:grid;grid-template-columns:1fr auto;gap:3px 10px;
+      background:var(--panel);border:1px solid var(--border);border-radius:8px;
+      padding:9px 11px;margin-bottom:7px;box-shadow:0 1px 2px rgba(31,35,40,.04)}
+    .bandgroup tbody td{display:block;padding:0;border:0;max-width:none}
+    .bandgroup tbody td.freq{grid-column:1;grid-row:1;font-size:15px}
+    .bandgroup tbody td.time{grid-column:2;grid-row:1;font-size:12.5px;color:var(--muted);text-align:right}
+    .bandgroup tbody td.brc{grid-column:1 / -1;grid-row:2;font-size:13px;font-weight:500}
+    .bandgroup tbody td.brc small{display:inline;margin-left:6px}
+    .bandgroup tbody td.lang{grid-column:1;grid-row:3;font-size:12px;color:var(--muted);white-space:normal}
+    .bandgroup tbody td.site{grid-column:1 / -1;grid-row:4;font-size:12px;color:var(--muted)}
+    .bandgroup tbody td.site small{display:inline;margin-left:6px}
+    .bandgroup tbody td.col-days,
+    .bandgroup tbody td.col-pow,
+    .bandgroup tbody td.col-az,
+    .bandgroup tbody td.col-ciraf,
+    .bandgroup tbody td.col-date{display:none}
   }
 </style>
 </head>
 <body>
 <header>
   <div class="headtop">
-    <h1><span data-i18n="h1">📻 HF 短波广播频率查询</span> <span class="tag" data-i18n="season">B26 · 2026 冬季</span></h1>
+    <div class="headleft">
+      <h1><span data-i18n="h1">📻 HF 短波广播频率查询</span> <span class="tag" data-i18n="season">B26 · 2026 冬季</span></h1>
+      <div class="tabs">
+        <button id="tabList" class="active" data-i18n="tabList">📋 频率列表</button>
+        <button id="tabMap" data-i18n="tabMap">🗺️ 世界地图</button>
+      </div>
+    </div>
     <div class="headbtns">
+      <button id="themebtn" data-i18n-title="mapThemeTitle" title="切换深色/浅色主题">🌙</button>
       <button id="uilang" data-i18n="uiLangBtn" data-i18n-title="uiLangTitle" title="Switch to English">EN</button>
-      <button id="collapsebtn" data-i18n-title="collapse" title="隐藏/显示上方面板（全屏看地图）">▾</button>
+      <button id="collapsebtn" aria-expanded="true" data-i18n-title="collapse" data-i18n-aria="collapse" title="收起/展开筛选栏">▴</button>
     </div>
   </div>
-  <div class="tabs">
-    <button id="tabList" class="active" data-i18n="tabList">📋 频率列表</button>
-    <button id="tabMap" data-i18n="tabMap">🗺️ 世界地图</button>
-  </div>
   <div class="controls">
-    <input id="q" data-i18n-ph="search" placeholder="搜索：频率 / 呼号 / 台站 / 语言 / 国家…">
+    <div class="searchbox">
+      <input id="q" data-i18n-ph="search" placeholder="搜频率 / 电台 / 地点 / 语言…">
+      <button type="button" id="qclear" class="search-clear" data-i18n-title="clearSearch" title="清空搜索">✕</button>
+    </div>
     <div class="ctrl-grp">
-      <label data-i18n="utcTime">UTC 时间</label>
+      <label data-i18n="utcTime">UTC</label>
       <input type="number" id="th" min="0" max="23" placeholder="HH">
       <span style="color:var(--muted)">:</span>
       <input type="number" id="tm" min="0" max="59" placeholder="MM">
+      <span id="localtime" class="local-time" title=""></span>
     </div>
     <div class="mode3" id="mode3" role="radiogroup" aria-label="时间筛选" data-i18n-aria="timeFilter" data-mode="now">
       <span class="knob"></span>
@@ -228,8 +355,8 @@
       <button data-lang="zh" data-i18n="qZh" data-i18n-title="qZhTitle" title="只看中文">中文</button>
       <button data-lang="en" data-i18n="qEn" data-i18n-title="qEnTitle" title="只看英文">English</button>
     </div>
-    <button id="drmbtn" data-i18n="drmOnly" data-i18n-title="drmOnlyTitle" title="只显示 DRM 数字广播（列表和地图）">只看 DRM</button>
-    <button id="nocn" data-i18n="noCn" data-i18n-title="noCnTitle" title="隐藏发射国家为 China 的电台（仅地图视图）">只听海外</button>
+    <button id="drmbtn" data-i18n="drmOnly" data-i18n-title="drmOnlyTitle" title="只显示 DRM 数字广播">只看 DRM</button>
+    <button id="nocn" data-i18n="noCn" data-i18n-title="noCnTitle" title="隐藏发射国家为中国的电台">只听海外</button>
     <select id="langsel"><option value="" data-i18n="allLangs">全部语言</option></select>
   </div>
 </header>
@@ -241,12 +368,25 @@
     <div class="mapwrap">
       <canvas id="map"></canvas>
       <div class="mapctrl">
-        <button id="probebtn" data-i18n-title="probeTitle" title="把收音机拖到地图上，查看该地点可接收的广播（点一下放到地图中央）">📻</button>      </div>
+        <button id="probebtn" class="probe-pill" data-i18n-title="probeTitle" title="把收音机拖到地图上，查看该地点可接收的广播（点一下放到地图中央）">📻<span class="p-txt" data-i18n="probeBtn">接收点</span></button>
+        <div class="mapctrl-grp">
+          <button id="zoomin" data-i18n-title="zoomIn" title="放大">+</button>
+          <button id="zoomout" data-i18n-title="zoomOut" title="缩小">−</button>
+          <button id="zoomreset" data-i18n-title="zoomReset" title="重置视野">⌖</button>
+        </div>
+        <div class="mapctrl-grp">
+          <button id="graylinebtn" class="active" data-i18n-title="graylineTitle" title="显示/隐藏昼夜分界线（灰线）">🌗</button>
+          <button id="legendbtn" data-i18n-title="legendTitle" title="显示/隐藏图例">?</button>
+        </div>
+      </div>
+      <div class="maplegend" id="maplegend" hidden></div>
       <div class="maptip" id="maptip"></div>
       <div class="probepanel" id="probepanel" hidden></div>
     </div>
   </div>
 </main>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
 
 <footer>
   <div class="stats" id="stats"></div>
@@ -268,61 +408,103 @@
 const I18N = {
   zh: {
     docTitle: 'HF 短波频率查询 · B26', h1: '📻 HF 短波广播频率查询', season: 'B26 · 2026 冬季',
-    uiLangBtn: 'EN', uiLangTitle: 'Switch to English', collapse: '隐藏/显示上方面板（全屏看地图）',
-    tabList: '📋 频率列表', tabMap: '🗺️ 世界地图', search: '搜索：频率 / 呼号 / 台站 / 语言 / 国家…', utcTime: 'UTC 时间',
+    uiLangBtn: 'EN', uiLangTitle: 'Switch to English', collapse: '收起/展开筛选栏',
+    tabList: '📋 频率列表', tabMap: '🗺️ 世界地图', search: '搜频率 / 电台 / 地点 / 语言…', clearSearch: '清空搜索',
+    utcTime: 'UTC', localPrefix: '本地 ',
     timeFilter: '时间筛选', modeAll: '全时段', modeAllTitle: '显示全部排程，不按时间过滤',
     modeAt: '指定时刻', modeAtTitle: '只看上方 UTC 时间正在播出的（拖动地图上的太阳会自动切到这里）',
     modeNow: '当前可收听', modeNowTitle: '跳到当前 UTC 时间并持续跟随',
     qZh: '中文', qZhTitle: '只看中文', qEn: 'English', qEnTitle: '只看英文',
-    drmOnly: '只看 DRM', drmOnlyTitle: '只显示 DRM 数字广播（列表和地图）',
-    noCn: '只听海外', noCnTitle: '隐藏发射国家为中国的电台（仅地图视图）', allLangs: '全部语言',
-    probeTitle: '把收音机拖到地图上，查看该地点可接收的广播（点一下放到地图中央）',
+    drmOnly: '只看 DRM', drmOnlyTitle: '只显示 DRM 数字广播',
+    noCn: '只听海外', noCnTitle: '隐藏发射国家为中国的电台', allLangs: '全部语言',
+    probeBtn: '接收点',
+    probeTitle: '把收音机拖到地图上，查看该地点可接收的广播（点一下放到地图中央；Shift+点击可快速移动）',
+    zoomIn: '放大', zoomOut: '缩小', zoomReset: '重置全球视野',
+    graylineTitle: '显示/隐藏昼夜分界线（灰线）', mapThemeTitle: '切换深色/浅色主题', legendTitle: '显示/隐藏图例',
     fData: '数据：', fSched: ' B26 排程', fDrm: 'DRM：', fSupp: '补充：',
-    statsFiltered: '过滤结果 <b>{0}</b> 条', statsOnAir: '当前时刻 ({0} UTC) 可收听 <b>{1}</b> 条 / <b>{2}</b> 个频率',
+    statsFiltered: '过滤结果 <b>{0}</b> 条',
+    statsOnAirNow: '当前时刻 ({0} UTC) 可收听 <b>{1}</b> 条 / <b>{2}</b> 个频率',
+    statsOnAirAt: '指定时刻 ({0} UTC) 可收听 <b>{1}</b> 条 / <b>{2}</b> 个频率',
     statsTotal: '数据库共 <b>{0}</b> 条 · <b>{1}</b> 个频率',
     empty: '没有匹配的频率。<br>试试清除筛选，或换个关键词/时间。', fold: '点击折叠/展开', nRows: '{0} 条',
+    listSummary: '共 {0} 个波段 · 点击频率可复制，点击 📍 在地图上定位发射台',
+    expandAll: '全部展开', collapseAll: '全部折叠',
+    copyFreqTip: '点击复制频率 {0} kHz', copied: '已复制 {0} kHz',
+    locateTip: '在世界地图上定位此发射台',
     bandMW: '160m / 中波', bandHi: '10m 及更高',
     thFreq: '频率', thTime: '时间', thTimeUtc: '时间(UTC)', thLang: '语言', thBrc: '电台 / 机构', thDays: '日', thPow: '功率',
     thAz: '方位', thDate: '日期', thSite: '发射地 / 国家', thNotes: '备注',
     onAir: '播出中', viaEibi: '来源 EiBi', viaDrm: '来源 drm.org · ', omni: '全向', noTime: '时间未公布',
-    tipMore: '… 还有 {0} 条（在列表中查看）', drmTitle: 'DRM 数字广播',
+    tipMore: '… 还有 {0} 条（在列表中查看）', tipPinHint: '点击发射台可固定此卡片并复制频率',
+    drmTitle: 'DRM 数字广播',
     drmStatus: { 'HFCC 登记': 'HFCC 登记', '已确认': '已确认', '较可能': '较可能', '待核实': '待核实', 'EiBi': 'EiBi' },
     levels: ['微弱', '一般', '良好', '强', '极强'],
     ppMeta: '{0} UTC · 估算可接收 <b>{1}</b> 条 · {2} 个电台', ppClose: '关闭',
+    ppGeo: '📍 我的位置', ppGeoDenied: '无法获取当前位置，请手动拖动 📻 或选择城市',
     ppEmpty: '此时此地估计收不到当前筛选条件下的广播。<br>试试换个时间或位置。',
-    ppKey: '<b>粗体</b>=强　常规=良好　<i>斜体</i>=一般/微弱', ppEibi: 'EiBi 数据无功率，按 50 kW 估算',
-    ppNote: '强度按发射功率、天线方向、距离和昼夜电离层粗略估算，仅供参考。* 来自 EiBi，无功率数据，按 50 kW 估算。拖动地图上的 📻 可换位置。',
+    ppKey: '<b>粗体</b>=强　常规=良好　<i>斜体</i>=一般/微弱　· 点击频率可复制', ppEibi: 'EiBi 数据无功率，按 50 kW 估算',
+    ppNote: '强度按功率、天线方向、距离和昼夜电离层粗略估算，仅供参考。* 来自 EiBi（按 50 kW）。可拖动 📻、Shift+点击地图或点上方城市切换位置。',
     ppFreqTip: '{0} kHz · {1} · {2} · {3} · {4} km · 强度：{5}',
+    legTitle: '地图图例', legArrow: '箭头 = 发射方位角', legLen: '长度 / 颜色 = 发射功率',
+    legOmni: '圆环 = 全向发射 (0°)', legDrm: '紫环 = 含 DRM 数字广播',
+    legSun: '太阳 = 直射点（左右拖动可调 UTC 小时）', legGray: '阴影 / 灰线 = 实时夜间区与晨昏带',
+    legHint: '滚轮/双指缩放，拖动平移；悬停预览，点击发射台可固定详情。',
   },
   en: {
     docTitle: 'HF Shortwave Schedule · B26', h1: '📻 HF Shortwave Broadcast Finder', season: 'B26 · Winter 2026/27',
-    uiLangBtn: '中文', uiLangTitle: '切换到中文', collapse: 'Hide/show the panel above (full-screen map)',
-    tabList: '📋 Frequency list', tabMap: '🗺️ World map', search: 'Search: frequency / station / site / language / country…',
-    utcTime: 'UTC time', timeFilter: 'Time filter', modeAll: 'All times', modeAllTitle: 'Show the whole schedule, no time filter',
+    uiLangBtn: '中文', uiLangTitle: '切换到中文', collapse: 'Collapse/expand filter bar',
+    tabList: '📋 Frequency list', tabMap: '🗺️ World map', search: 'Search freq / station / site / lang…', clearSearch: 'Clear search',
+    utcTime: 'UTC', localPrefix: 'Local ',
+    timeFilter: 'Time filter', modeAll: 'All times', modeAllTitle: 'Show the whole schedule, no time filter',
     modeAt: 'At time', modeAtTitle: 'Only what is on air at the UTC time above (dragging the sun on the map switches here)',
     modeNow: 'On air now', modeNowTitle: 'Jump to the current UTC time and keep following it',
     qZh: 'Chinese', qZhTitle: 'Chinese only', qEn: 'English', qEnTitle: 'English only',
-    drmOnly: 'DRM only', drmOnlyTitle: 'Show only DRM digital broadcasts (list and map)',
-    noCn: 'Overseas only', noCnTitle: 'Hide stations whose transmitting country is China (map view only)', allLangs: 'All languages',
-    probeTitle: 'Drag the radio onto the map to see what can be received there (click to drop it in the centre)',
+    drmOnly: 'DRM only', drmOnlyTitle: 'Show only DRM digital broadcasts',
+    noCn: 'Overseas only', noCnTitle: 'Hide stations whose transmitting country is China', allLangs: 'All languages',
+    probeBtn: 'Rx Probe',
+    probeTitle: 'Drag the radio onto the map to estimate reception (click to drop in centre; Shift+click to relocate)',
+    zoomIn: 'Zoom in', zoomOut: 'Zoom out', zoomReset: 'Reset world view',
+    graylineTitle: 'Toggle day/night terminator (grayline)', mapThemeTitle: 'Switch light/dark theme', legendTitle: 'Toggle legend',
     fData: 'Data: ', fSched: ' B26 schedule', fDrm: 'DRM: ', fSupp: 'supplement: ',
-    statsFiltered: '<b>{0}</b> matching', statsOnAir: 'On air at {0} UTC: <b>{1}</b> broadcasts / <b>{2}</b> frequencies',
+    statsFiltered: '<b>{0}</b> matching',
+    statsOnAirNow: 'On air now ({0} UTC): <b>{1}</b> broadcasts / <b>{2}</b> frequencies',
+    statsOnAirAt: 'On air at {0} UTC: <b>{1}</b> broadcasts / <b>{2}</b> frequencies',
     statsTotal: 'Database: <b>{0}</b> entries · <b>{1}</b> frequencies',
     empty: 'No matching frequencies.<br>Try clearing filters or a different keyword/time.', fold: 'Click to collapse/expand', nRows: '{0}',
+    listSummary: '{0} bands · click frequency to copy, click 📍 to locate on map',
+    expandAll: 'Expand all', collapseAll: 'Collapse all',
+    copyFreqTip: 'Click to copy {0} kHz', copied: 'Copied {0} kHz',
+    locateTip: 'Locate transmitter on world map',
     bandMW: 'MW / 160m', bandHi: '10m and above',
     thFreq: 'kHz', thTime: 'Time', thTimeUtc: 'Time (UTC)', thLang: 'Language', thBrc: 'Station', thDays: 'Days', thPow: 'Power',
     thAz: 'Azimuth', thDate: 'Dates', thSite: 'Site / country', thNotes: 'Notes',
     onAir: 'On air', viaEibi: 'via EiBi', viaDrm: 'via drm.org · ', omni: 'omni', noTime: 'times not published',
-    tipMore: '… {0} more (see the list)', drmTitle: 'DRM digital broadcast',
+    tipMore: '… {0} more (see the list)', tipPinHint: 'Click transmitter to pin card & copy frequencies',
+    drmTitle: 'DRM digital broadcast',
     drmStatus: { 'HFCC 登记': 'HFCC registration', '已确认': 'confirmed', '较可能': 'likely', '待核实': 'unverified', 'EiBi': 'EiBi' },
     levels: ['Weak', 'Fair', 'Good', 'Strong', 'Excellent'],
     ppMeta: '{0} UTC · est. <b>{1}</b> receivable · {2} stations', ppClose: 'Close',
+    ppGeo: '📍 My location', ppGeoDenied: 'Geolocation unavailable — drag 📻 or pick a city',
     ppEmpty: 'Probably nothing receivable here and now with the current filters.<br>Try another time or place.',
-    ppKey: '<b>bold</b> = strong · regular = good · <i>italic</i> = fair/weak', ppEibi: 'No power in EiBi data; estimated at 50 kW',
-    ppNote: 'Rough estimate from power, antenna direction, distance and day/night ionosphere. * From EiBi, no power data, estimated at 50 kW. Drag the 📻 on the map to move.',
+    ppKey: '<b>bold</b> = strong · regular = good · <i>italic</i> = fair/weak · click freq to copy', ppEibi: 'No power in EiBi data; estimated at 50 kW',
+    ppNote: 'Rough estimate from power, beam, distance & ionosphere. * From EiBi (50 kW). Drag 📻, Shift+click map, or pick a preset city.',
     ppFreqTip: '{0} kHz · {1} · {2} · {3} · {4} km · signal: {5}',
+    legTitle: 'Map Legend', legArrow: 'Arrow = Antenna azimuth', legLen: 'Length / color = TX power',
+    legOmni: 'Circle = Omnidirectional (0°)', legDrm: 'Purple ring = DRM digital',
+    legSun: 'Sun = Subsolar point (drag left/right for UTC)', legGray: 'Shade / line = Night zone & grayline',
+    legHint: 'Scroll/pinch to zoom, drag to pan; hover to preview, click site to pin.',
   },
 };
+const PROBE_CITIES = [
+  { zh: '北京', en: 'Beijing', lat: 39.9, lon: 116.4 },
+  { zh: '上海', en: 'Shanghai', lat: 31.2, lon: 121.5 },
+  { zh: '台北', en: 'Taipei', lat: 25.0, lon: 121.5 },
+  { zh: '东京', en: 'Tokyo', lat: 35.7, lon: 139.7 },
+  { zh: '新加坡', en: 'Singapore', lat: 1.3, lon: 103.8 },
+  { zh: '伦敦', en: 'London', lat: 51.5, lon: -0.1 },
+  { zh: '纽约', en: 'New York', lat: 40.7, lon: -74.0 },
+  { zh: '悉尼', en: 'Sydney', lat: -33.9, lon: 151.2 },
+];
 let UI = (() => {
   try { const v = localStorage.getItem('hf.uiLang'); if (v === 'zh' || v === 'en') return v; } catch {}
   return /^zh\b/i.test(navigator.language || '') ? 'zh' : 'en';
@@ -332,8 +514,13 @@ function t(key, ...a){
   return typeof s === 'string' ? s.replace(/\{(\d)\}/g, (_, i) => a[i]) : s;
 }
 const ZH_NAMES = JSON.parse(document.getElementById('zhnames').textContent);
-// 数据名称的显示：中文界面用对照表，没有对照（或英文界面）保留原文
-function tn(kind, name){ return (UI === 'zh' && name && ZH_NAMES[kind][name]) || name || ''; }
+// 修正 HFCC 原始数据中的已知拼写错误（不影响原始 JSON 字典兼容）
+const EN_LANG_FIX = { 'Standart Chinese': 'Standard Chinese' };
+function tn(kind, name){
+  if (!name) return '';
+  if (UI === 'zh') return ZH_NAMES[kind][name] || name;
+  return kind === 'lang' ? (EN_LANG_FIX[name] || name) : name;
+}
 const nmLang = r => tn('lang', r.langname || r.lang);
 const nmCountry = r => tn('country', r.admname || r.adm);
 const nmBrc = r => tn('brc', r.brcname || r.brc);
@@ -351,6 +538,29 @@ function applyStatic(){
   document.querySelectorAll('[data-i18n-aria]').forEach(e => e.setAttribute('aria-label', t(e.dataset.i18nAria)));
 }
 
+// Toast 轻提示 + 复制频率
+const toastEl = document.getElementById('toast');
+let toastTimer = null;
+function showToast(msg){
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), 1800);
+}
+function copyFreq(freq){
+  const str = String(freq);
+  if (navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(str).then(() => showToast(t('copied', str))).catch(() => fallbackCopy(str));
+  } else fallbackCopy(str);
+}
+function fallbackCopy(str){
+  const ta = document.createElement('textarea');
+  ta.value = str; ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta); ta.select();
+  try { document.execCommand('copy'); showToast(t('copied', str)); } catch {}
+  ta.remove();
+}
+
 // DRM：drm.org 时间表（由 tools/import_drm.py 生成）。marks = 被 drm.org 确认的 HFCC 记录，extra = 新增记录
 const DRM = JSON.parse(document.getElementById('drmdata').textContent);
 const EIBI = JSON.parse(document.getElementById('eibidata').textContent);
@@ -362,7 +572,7 @@ const DATA = (() => {
   const finish = r => {
     r._q = (r.f+' '+r.s+' '+r.e+' '+r.loc+' '+r.site+' '+r.langname+' '+r.lang+' '+
       r.brcname+' '+r.brc+' '+r.admname+' '+r.adm+' '+r.notes+' '+r.ciraf+' '+r.pow+(r.drm?' drm':'')+
-      // 中文名称也可搜索（如“美国之音”“普通话”）
+      ' '+(EN_LANG_FIX[r.langname]||'')+
       ' '+(ZH_NAMES.brc[r.brcname]||'')+' '+(ZH_NAMES.lang[r.langname]||'')+' '+(ZH_NAMES.country[r.admname]||'')+
       ' '+(ZH_NAMES.site[r.site]||'')).toLowerCase();
     return r;
@@ -390,7 +600,14 @@ const DATA = (() => {
     if (r.drm) r.drmStatus = 'EiBi';
     rows.push(finish(r));
   }
-  return rows;
+  // 精确去重（完全相同的频次/时间/台站/方位/功率/电台只保留一条，不误删不同方位角记录）
+  const seen = new Set();
+  return rows.filter(r => {
+    const k = `${r.f}|${r.s}|${r.e}|${r.loc}|${r.site}|${r.langname||r.lang}|${r.brcname||r.brc}|${r.pow}|${r.az}|${r.days}|${r.drm?1:0}`;
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
 })();
 function drmBadge(r){
   return r.drm ? `<span class="badge b-drm" title="${t('drmTitle')} · ${drmStatusText(r)}${r.drmLabel?' ('+r.drmLabel+')':''}">DRM</span>` : '';
@@ -400,7 +617,8 @@ function timeText(r){ return r.s ? `${r.s}–${r.e}` : t('noTime'); }
 const LAND = JSON.parse(document.getElementById('hfland').textContent);
 
 const $ = s => document.querySelector(s);
-const qEl = $('#q'), thEl = $('#th'), tmEl = $('#tm'), langSel = $('#langsel'),
+const qEl = $('#q'), qClearBtn = $('#qclear'), thEl = $('#th'), tmEl = $('#tm'),
+      localTimeEl = $('#localtime'), langSel = $('#langsel'),
       modeEl = $('#mode3'),
       content = $('#content'), statsEl = $('#stats');
 
@@ -425,8 +643,6 @@ function langQuickMatch(r){
 }
 
 // ---- helpers ----
-const DOW = ['','周一','周二','周三','周四','周五','周六','周日'];
-
 function nowUTC(){
   const d = new Date();
   return {h: d.getUTCHours(), m: d.getUTCMinutes(), dow: d.getUTCDay()===0?7:d.getUTCDay()};
@@ -438,12 +654,29 @@ function mins(t){ // "1230" -> 750 ; "2400" -> 1440
 }
 function toHM(m){ return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0'); }
 
+// 根据当前选定的 UTC 时间更新本地时间对照显示
+function updateLocalTimeDisplay(){
+  const h = Math.max(0, Math.min(23, parseInt(thEl.value,10) || 0));
+  const m = Math.max(0, Math.min(59, parseInt(tmEl.value,10) || 0));
+  const now = new Date();
+  const utcDay = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  const dt = new Date(utcDay + (h * 60 + m) * 60000);
+  const lh = String(dt.getHours()).padStart(2, '0');
+  const lm = String(dt.getMinutes()).padStart(2, '0');
+  const dayDiff = Math.round((new Date(dt.getFullYear(), dt.getMonth(), dt.getDate()) - new Date(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())) / 86400000);
+  const suffix = dayDiff > 0 ? ' +1d' : dayDiff < 0 ? ' -1d' : '';
+  const offMin = -now.getTimezoneOffset();
+  const offSign = offMin >= 0 ? '+' : '-';
+  const offH = Math.floor(Math.abs(offMin) / 60);
+  const offM = Math.abs(offMin) % 60;
+  const tzStr = `UTC${offSign}${offH}${offM ? ':' + String(offM).padStart(2,'0') : ''}`;
+  localTimeEl.textContent = `${t('localPrefix')}${lh}:${lm}${suffix}`;
+  localTimeEl.title = `${tzStr}`;
+}
+
 function isOnAir(rec, curMin, dow){
   const s = mins(rec.s), e = mins(rec.e);
   if (s===null||e===null) return false;
-  if (rec.days && rec.days.length===7 && !rec.days.includes(String(dow))){
-    // still allow; some use full week
-  }
   let on;
   if (e <= s) on = curMin >= s || curMin < e;      // crosses midnight
   else on = curMin >= s && curMin < e;
@@ -471,10 +704,6 @@ function bandOf(f){
 function debounce(fn,ms){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms)}}
 
 // ---- build UI ----
-// 只列出数据库中真实存在（能解析出语言名）的语言，跳过未解析的多语言代码。
-// 顺序按原“语言暴露量”页（exposure.html，2026-10-27 已删除，可在 git 历史中找到）的排名；
-// 该页把中文、阿拉伯语各变体合并成一项，这里把对应语言放在合并项的位置、组内按记录数排列。
-// 不在列表中的语言按字母排在最后。
 const EXPOSURE_ORDER = [
   "Chinese (merged)", "English", "Arabic (merged)", "Russian", "Multiple languages", "Spanish",
   "Japanese", "Korean", "Persian", "French", "Tibetan", "Dari", "Undetermined", "Turkish", "Hausa",
@@ -508,32 +737,34 @@ for (const name of EXPOSURE_ORDER){
   langs.push(...members);
 }
 langs.push(...[...langCount.keys()].filter(l => !langs.includes(l)).sort((a,b)=>a.localeCompare(b)));
-function fillLangSel(){   // 选项的值是英文名（用于筛选），显示文字随界面语言变化
+function fillLangSel(){
+  const cur = langSel.value;
   [...langSel.options].slice(1).forEach(o => o.remove());
   for (const l of langs){
     const o=document.createElement('option'); o.value=l; o.textContent=tn('lang', l); langSel.appendChild(o);
   }
+  langSel.value = cur;
 }
 fillLangSel();
 
 // ---- render ----
 function currentFilters(){
-  // 搜索框和语言下拉只在列表视图显示，地图视图下不参与过滤（值保留，切回列表仍生效）
-  const q = mapActive ? '' : qEl.value.trim().toLowerCase();
-  const curMin = (parseInt(thEl.value,10)||0)*60 + (parseInt(tmEl.value,10)||0);
+  // 地图与列表两视图筛选完全对称生效
+  const q = qEl.value.trim().toLowerCase();
+  const h = Math.max(0, Math.min(23, parseInt(thEl.value,10) || 0));
+  const m = Math.max(0, Math.min(59, parseInt(tmEl.value,10) || 0));
+  const curMin = h * 60 + m;
   const n = nowUTC();
   const dow = n.dow;
-  const lang = mapActive ? '' : langSel.value;
-  const noCN = mapActive && excludeChina;   // “只听海外”只在地图视图生效
+  const lang = langSel.value;
+  const noCN = excludeChina;
   let rows = DATA.filter(r=>{
     if (noCN && r.admname === 'China') return false;
     if (drmOnly && !r.drm) return false;
     if (liveOnly && !isOnAir(r, curMin, dow)) return false;
     if (!langQuickMatch(r)) return false;
     if (lang && (r.langname||r.lang) !== lang) return false;
-    if (q){
-      if (!r._q.includes(q)) return false;
-    }
+    if (q && !r._q.includes(q)) return false;
     return true;
   });
   rows.sort((a,b)=>a.f-b.f || a.s.localeCompare(b.s));
@@ -541,9 +772,12 @@ function currentFilters(){
 }
 
 let mapActive = false;
-const openBands = new Set();   // 用户展开的频段组；默认全部折叠，刷新列表时保持展开状态
+const openBands = new Set();
+let bandTouched = false;   // 用户手动展开/折叠后尊重用户状态
 
 function render(){
+  updateLocalTimeDisplay();
+  qClearBtn.classList.toggle('show', qEl.value.length > 0);
   const {rows, curMin, dow} = currentFilters();
 
   // stats
@@ -552,9 +786,10 @@ function render(){
   const onRows = DATA.filter(r=>isOnAir(r, curMin, dow));
   const onair = onRows.length;
   const onfreqs = new Set(onRows.map(r=>r.f)).size;
+  const onAirKey = timeMode === 'now' ? 'statsOnAirNow' : 'statsOnAirAt';
   statsEl.innerHTML =
     `<span>${t('statsFiltered', rows.length)}</span>` +
-    `<span>${t('statsOnAir', toHM(curMin), onair, onfreqs)}</span>` +
+    `<span>${t(onAirKey, toHM(curMin), onair, onfreqs)}</span>` +
     `<span>${t('statsTotal', total, freqs.size)}</span>`;
 
   if (!rows.length){
@@ -570,12 +805,23 @@ function render(){
   // group by band
   const groups = {};
   rows.forEach(r=>{ const b=bandOf(r.f); (groups[b]=groups[b]||[]).push(r); });
+  const bandKeys = Object.keys(groups);
 
-  let html='';
+  // 结果较少（例如搜索后 <= 80 条）自动全部展开，方便直接查看；首次进入列表默认展开常用波段（31m/25m 或首个波段）
+  const autoOpenAll = rows.length <= 80;
+  if (!bandTouched && !autoOpenAll && openBands.size === 0){
+    if (groups['31m']) openBands.add('31m');
+    else if (bandKeys.length) openBands.add(bandKeys[0]);
+  }
+
+  let html = `<div class="listbar"><span>${t('listSummary', bandKeys.length)}</span>` +
+    `<div class="listbar-btns"><button type="button" data-list-act="expand">${t('expandAll')}</button>` +
+    `<button type="button" data-list-act="collapse">${t('collapseAll')}</button></div></div>`;
+
   for (const [band, list] of Object.entries(groups)){
-    const open = openBands.has(band);
+    const open = autoOpenAll || openBands.has(band);
     html += `<div class="bandgroup${open ? '' : ' collapsed'}" data-band="${band}"><h2 class="ghead" title="${t('fold')}"><span class="chev">${open ? '▾' : '▸'}</span>${bandLabel(band)} <span class="cnt">${t('nRows', list.length)}</span></h2>`;
-    html += `<table><thead><tr>
+    html += `<div class="tbl-wrap"><table><thead><tr>
       <th>${t('thFreq')}</th><th>${t('thTime')}</th><th>${t('thLang')}</th><th>${t('thBrc')}</th>
       <th class="col-days">${t('thDays')}</th><th class="col-pow">${t('thPow')}</th><th class="col-az">${t('thAz')}</th>
       <th class="col-ciraf">CIRAF</th><th class="col-date">${t('thDate')}</th><th>${t('thSite')}</th><th class="col-days">${t('thNotes')}</th>
@@ -583,8 +829,11 @@ function render(){
     for (const r of list){
       const on = liveOnly && isOnAir(r, curMin, dow);
       const onBadge = on && liveOnly ? `<span class="badge b-now">${t('onAir')}</span>` : '';
+      const hasCoord = r.lat != null && r.lon != null;
+      const siteKey = escAttr(r.loc || '@' + r.site);
+      const locBtn = hasCoord ? `<button type="button" class="loc-btn" data-locate="${siteKey}" title="${t('locateTip')}">📍</button>` : '';
       html += `<tr>
-        <td class="freq">${r.f}${drmBadge(r)}${onBadge}</td>
+        <td class="freq"><span class="freq-btn" data-copy="${r.f}" title="${t('copyFreqTip', r.f)}">${r.f}</span>${drmBadge(r)}${onBadge}</td>
         <td class="time">${timeText(r)}</td>
         <td class="lang">${nmLang(r)}<small> ${r.langname&&r.lang?('('+r.lang+')'):''}</small></td>
         <td class="brc">${nmBrc(r)||'—'}<small>${r.src === 'EiBi' ? t('viaEibi') : r.src ? t('viaDrm') + drmStatusText(r) : (r.brc||'')}${r.fmo?(' · FMO '+r.fmo):''}</small></td>
@@ -593,13 +842,12 @@ function render(){
         <td class="col-az">${r.az||''}${r.az&&r.az!=='0'?'°':''}</td>
         <td class="col-ciraf">${r.ciraf||''}</td>
         <td class="col-date">${fmtDate(r.fd)}–${fmtDate(r.td)}</td>
-        <td class="site">${nmSite(r)}<small>${nmCountry(r)}</small></td>
+        <td class="site"><div class="site-row"><div>${nmSite(r)}<small>${nmCountry(r)}</small></div>${locBtn}</div></td>
         <td class="col-days notes">${noteText(r.notes)}${r.alt?(' ALT:'+r.alt):''}</td>
       </tr>`;
     }
-    html += `</tbody></table></div>`;
+    html += `</tbody></table></div></div>`;
   }
-  // 每 30 秒的自动刷新会重建表格：内容没变就不动 DOM；变了也保持滚动位置，避免跳回顶部
   if (html === lastListHtml) return;
   lastListHtml = html;
   const y = window.scrollY;
@@ -608,6 +856,7 @@ function render(){
 }
 let lastListHtml = '';
 
+function escAttr(s){ return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
 function fmtDate(d){
   if (!d || d.length!==6) return d||'';
   return d.slice(0,2)+'/'+d.slice(2,4);
@@ -615,7 +864,7 @@ function fmtDate(d){
 
 // ---- events ----
 qEl.addEventListener('input', debounce(render,150));
-// 手动改时间 = 指定时刻
+qClearBtn.addEventListener('click', () => { qEl.value = ''; qEl.focus(); render(); });
 thEl.addEventListener('input', () => { setTimeMode('at'); render(); });
 tmEl.addEventListener('input', () => { setTimeMode('at'); render(); });
 
@@ -626,12 +875,12 @@ function syncLangButtons(){
 }
 langToggleBtns.forEach(b => b.addEventListener('click', () => {
   langToggles[b.dataset.lang] = !langToggles[b.dataset.lang];
-  if (langToggles.zh || langToggles.en) langSel.value = '';   // 快捷优先，清空下拉
+  if (langToggles.zh || langToggles.en) langSel.value = '';
   syncLangButtons();
   render();
 }));
 
-// “只看 DRM”：列表和地图都只显示 DRM 数字广播
+// “只看 DRM”
 let drmOnly = false;
 const drmBtn = document.getElementById('drmbtn');
 drmBtn.addEventListener('click', () => {
@@ -640,7 +889,7 @@ drmBtn.addEventListener('click', () => {
   render();
 });
 
-// “只听海外”：隐藏发射国家为 China 的电台（数据中这些电台全部从中国境内台站发射，含 Taipei 台站）
+// “只听海外”
 let excludeChina = false;
 const noCnBtn = document.getElementById('nocn');
 noCnBtn.addEventListener('click', () => {
@@ -667,18 +916,40 @@ function showTab(map){
   tabMap.classList.toggle('active', map);
   document.body.classList.toggle('view-map', map);
   contentEl.style.display = map ? 'none' : '';
-  mapview.style.display = map ? '' : 'none';
+  mapview.style.display = map ? 'flex' : 'none';
   if (map) MAP.resize();
   render();
 }
 tabList.addEventListener('click', () => showTab(false));
 tabMap.addEventListener('click', () => showTab(true));
-window.addEventListener('resize', debounce(() => { if (mapActive) MAP.resize(); }, 150));
+window.addEventListener('resize', debounce(() => { if (mapActive) MAP.resize(); }, 120));
 
-// ---- 折叠/展开频段组 ----
+// ---- 列表交互：折叠/展开、一键展开收起、复制频率、地图定位 ----
 contentEl.addEventListener('click', e => {
+  const actBtn = e.target.closest('[data-list-act]');
+  if (actBtn){
+    bandTouched = true;
+    const expand = actBtn.dataset.listAct === 'expand';
+    contentEl.querySelectorAll('.bandgroup').forEach(g => {
+      g.classList.toggle('collapsed', !expand);
+      if (expand) openBands.add(g.dataset.band); else openBands.delete(g.dataset.band);
+      const chev = g.querySelector('.chev');
+      if (chev) chev.textContent = expand ? '▾' : '▸';
+    });
+    return;
+  }
+  const copyEl = e.target.closest('[data-copy]');
+  if (copyEl){ copyFreq(copyEl.dataset.copy); return; }
+  const locEl = e.target.closest('[data-locate]');
+  if (locEl){
+    const key = locEl.dataset.locate;
+    showTab(true);
+    MAP.focusSite(key);
+    return;
+  }
   const h = e.target.closest('.bandgroup .ghead');
   if (!h) return;
+  bandTouched = true;
   const g = h.parentElement;
   const collapsed = g.classList.toggle('collapsed');
   if (collapsed) openBands.delete(g.dataset.band); else openBands.add(g.dataset.band);
@@ -686,8 +957,11 @@ contentEl.addEventListener('click', e => {
   if (chev) chev.textContent = collapsed ? '▸' : '▾';
 });
 
-// 三档开关。切到“当前可收听”时跳到当前 UTC 时间（太阳直射点随之刷新）
-function jumpToNow(){ const n = nowUTC(); thEl.value = n.h; tmEl.value = n.m; }
+// 三档开关
+const pad2 = n => String(Math.max(0, parseInt(n, 10) || 0)).padStart(2, '0');
+function jumpToNow(){ const n = nowUTC(); thEl.value = pad2(n.h); tmEl.value = pad2(n.m); }
+thEl.addEventListener('blur', () => { thEl.value = pad2(Math.min(23, parseInt(thEl.value,10) || 0)); });
+tmEl.addEventListener('blur', () => { tmEl.value = pad2(Math.min(59, parseInt(tmEl.value,10) || 0)); });
 function setTimeMode(m){
   timeMode = m;
   liveOnly = m !== 'all';
@@ -703,42 +977,92 @@ setInterval(() => {
   if (timeMode === 'now' && !document.hidden){ jumpToNow(); render(); }
 }, 30000);
 
-// 隐藏/显示地图上方的所有面板（手机上看地图时用）
+// 收起/展开筛选栏（修正箭头方向：展开显示 ▴，收起显示 ▾；折叠时保留视图切换 Tab）
 const collapseBtn = document.getElementById('collapsebtn');
 collapseBtn.addEventListener('click', () => {
   const hidden = document.body.classList.toggle('top-hidden');
-  collapseBtn.textContent = hidden ? '▴' : '▾';
-  if (typeof MAP !== 'undefined') setTimeout(() => MAP.resize(), 60);
+  collapseBtn.textContent = hidden ? '▾' : '▴';
+  collapseBtn.setAttribute('aria-expanded', String(!hidden));
+  if (typeof MAP !== 'undefined' && mapActive) setTimeout(() => MAP.resize(), 40);
 });
 
 /* ============================================================
-   世界地图：等距圆柱投影 + 每个发射台按方位角/功率绘制的箭头
+   世界地图：等距圆柱投影 + 暗/浅双主题 + 实时昼夜灰线 + 标签避让
    ============================================================ */
 const MAP = (() => {
   const cv = document.getElementById('map');
   const ctx = cv.getContext('2d');
   const tip = document.getElementById('maptip');
-  const legend = document.getElementById('maplegend');   // 图例已移除，保留变量以兼容旧代码
+  const legend = document.getElementById('maplegend');
+  const zoomInBtn = document.getElementById('zoomin');
+  const zoomOutBtn = document.getElementById('zoomout');
+  const zoomResetBtn = document.getElementById('zoomreset');
+  const graylineBtn = document.getElementById('graylinebtn');
+  const legendBtn = document.getElementById('legendbtn');
 
-  // 功率 → 视觉权重 powT(p) ∈ [0,1]
-  //   · 100~800 kW：按实际功率线性比例
-  //   · 100 kW 以下：按 100 的一半（=50）显示，即统一落在起点
+  // 整站与地图统一主题：默认 light（清爽浅色），可一键切换 dark
+  let mapTheme = (() => {
+    try { const v = localStorage.getItem('hf.theme'); if (v === 'dark' || v === 'light') return v; } catch {}
+    return 'light';
+  })();
+  let showGrayline = true;
+  let legendOpen = false;
+
+  const THEME = {
+    dark: {
+      ocean: '#0d1520',
+      land: '#1c2836',
+      coast: '#364a60',
+      grid: 'rgba(130,165,205,.12)',
+      gridText: 'rgba(145,168,192,.72)',
+      arrowHalo: 'rgba(11,17,25,.88)',
+      arrowLightness: 58,
+      siteFill: '#e6edf3',
+      siteStroke: '#0d1520',
+      siteHotFill: '#3fb950',
+      labelColor: '#d0dde9',
+      labelHot: '#3fb950',
+      labelHalo: 'rgba(11,17,25,.92)',
+      nightFill: 'rgba(3,7,14,.46)',
+      graylineGlow: 'rgba(255,196,86,.16)',
+      graylineStroke: 'rgba(255,208,108,.5)',
+      drmColor: '#b388ff',
+      pinStroke: '#0d1117',
+    },
+    light: {
+      ocean: '#dde3ea',
+      land: '#f6f8fa',
+      coast: 'rgba(115,129,145,.82)',
+      grid: 'rgba(60,80,105,.12)',
+      gridText: 'rgba(82,94,108,.78)',
+      arrowHalo: '#ffffff',
+      arrowLightness: 40,
+      siteFill: '#ffffff',
+      siteStroke: '#2b3540',
+      siteHotFill: '#1a7f37',
+      labelColor: '#24292f',
+      labelHot: '#1a7f37',
+      labelHalo: 'rgba(255,255,255,.94)',
+      nightFill: 'rgba(22,38,64,.16)',
+      graylineGlow: 'rgba(217,130,0,.14)',
+      graylineStroke: 'rgba(204,120,0,.55)',
+      drmColor: '#8250df',
+      pinStroke: '#ffffff',
+    }
+  };
+  function pal(){ return THEME[mapTheme]; }
+
   const PMAX = 800, PBASE = 100, PBASE_HALF = 50;
-  const DRM_COLOR = '#8957e5';   // DRM 台站标记色（紫）
   const LEN_MIN = 3.2, LEN_MAX = 17;
   function powT(p){
     if (!(p > 0)) p = PBASE_HALF;
     const eff = p < PBASE ? PBASE_HALF : Math.min(p, PMAX);
-    return (eff - PBASE_HALF) / (PMAX - PBASE_HALF);   // 0..1
+    return (eff - PBASE_HALF) / (PMAX - PBASE_HALF);
   }
-  function powerLen(p){
-    return LEN_MIN + (LEN_MAX - LEN_MIN) * powT(p);
-  }
-
-  // 功率 → 颜色：红→橙→黄→绿→青→蓝→紫（与箭头长度同一权重）
+  function powerLen(p){ return LEN_MIN + (LEN_MAX - LEN_MIN) * powT(p); }
   function powerColor(p){
-    const hue = powT(p) * 280;   // HSL: 0°红 → 60°黄 → 120°绿 → 180°青 → 240°蓝 → 280°紫
-    return `hsl(${hue.toFixed(0)}, 85%, 40%)`;   // 浅色地图上用较深的颜色才看得清
+    const hue = powT(p) * 280;
+    return `hsl(${hue.toFixed(0)}, 85%, ${pal().arrowLightness}%)`;
   }
   function bandName(f){
     if (f < 3000)  return '< 3000 kHz';
@@ -752,11 +1076,13 @@ const MAP = (() => {
     return '≥ 22000 kHz';
   }
 
-  // 视图状态（经纬度窗口）
-  const view = { lon0: -180, lon1: 180, lat0: -60, lat1: 75 };
+  // 默认全球完整视野（经度 -180..180 不裁切东亚/大洋洲）
+  const view = { lon0: -180, lon1: 180, lat0: -58, lat1: 76 };
+  let userMovedView = false;
 
-  let siteGroups = [];     // 当前渲染的站点聚合
+  let siteGroups = [];
   let hoverSite = null;
+  let pinnedSite = null;
   let dpr = 1;
 
   function proj(lon, lat){
@@ -770,56 +1096,75 @@ const MAP = (() => {
     return (view.lon1 - view.lon0) / W;
   }
 
-  // 让可见经纬范围与画布长宽比一致，避免把地图拉长/压扁
-  // （proj 会把 view 的经纬范围铺满整个画布，只有比例一致时才不会变形）
-  function fitViewAspect(W, H){
+  function resetView(){
+    userMovedView = false;
+    view.lon0 = -180; view.lon1 = 180;
+    view.lat0 = -58; view.lat1 = 76;
+    const W = cv.width / dpr, H = cv.height / dpr;
+    if (W > 0 && H > 0) fitViewAspect(W, H, true);
+    hideTip(true);
+    draw();
+  }
+
+  function fitViewAspect(W, H, preferFullWorld){
     if (!(W > 0 && H > 0)) return;
-    const target = W / H;                       // lonSpan / latSpan 应等于画布长宽比
-    const cx = (view.lon0 + view.lon1) / 2;
-    const cy = (view.lat0 + view.lat1) / 2;
+    const target = W / H;
+    let cx = (view.lon0 + view.lon1) / 2;
+    let cy = (view.lat0 + view.lat1) / 2;
     let latSpan = view.lat1 - view.lat0;
     let lonSpan = view.lon1 - view.lon0;
-    if (lonSpan / latSpan > target) latSpan = lonSpan / target;  // 地图太宽 → 加高纬度
-    else                            lonSpan = latSpan * target;  // 地图太高 → 加宽经度
-    if (latSpan > 170){ latSpan = 170; lonSpan = latSpan * target; }   // 纬度不能超过 ±85
-    if (lonSpan > 360){ lonSpan = 360; latSpan = lonSpan / target; }
+    if (preferFullWorld){
+      // 桌面宽屏尽量完整显示 -180..180 经度；极窄竖屏聚焦欧亚非与太平洋核心区
+      lonSpan = 360;
+      latSpan = lonSpan / target;
+      if (latSpan > 168){
+        latSpan = 168;
+        lonSpan = Math.min(360, latSpan * target);
+        cx = 25;   // 竖屏下略偏东以更好覆盖亚欧非发射台密集区
+      } else {
+        cx = 0;
+      }
+      cy = 10;
+    } else {
+      if (lonSpan / latSpan > target) latSpan = lonSpan / target;
+      else lonSpan = latSpan * target;
+      if (latSpan > 170){ latSpan = 170; lonSpan = Math.min(360, latSpan * target); }
+      if (lonSpan > 360){ lonSpan = 360; latSpan = Math.min(170, lonSpan / target); }
+    }
     latSpan = Math.max(2, Math.min(170, latSpan));
     lonSpan = Math.max(3, Math.min(360, lonSpan));
     view.lat0 = Math.max(-85, Math.min(85 - latSpan, cy - latSpan / 2));
     view.lat1 = view.lat0 + latSpan;
-    view.lon0 = cx - lonSpan / 2;
+    view.lon0 = Math.max(-180, Math.min(180 - lonSpan, cx - lonSpan / 2));
     view.lon1 = view.lon0 + lonSpan;
   }
 
   function resize(){
     const wrap = cv.parentElement;
     const cssW = wrap.clientWidth;
-    // 窄屏（竖屏手机）或触摸设备都按“移动端”处理
+    if (!(cssW > 0)) return;
     const mobile = window.matchMedia('(max-width:820px)').matches
                 || window.matchMedia('(pointer: coarse)').matches;
+    const hdr = document.querySelector('header');
+    const ftr = document.querySelector('footer');
+    const used = (hdr ? hdr.offsetHeight : 0) + (ftr ? ftr.offsetHeight : 0) + 26;
     let cssH;
     if (mobile){
-      // 手机上尽量占满剩余视口，确保地图占据大部分区域
-      const hdr = document.querySelector('header');
-      // 留出页脚的高度，让统计行在地图下方也能直接看到
-      const ftr = document.querySelector('footer');
-      const used = (hdr ? hdr.offsetHeight : 0) + (ftr ? ftr.offsetHeight : 0) + 28;
-      cssH = Math.max(280, Math.min(window.innerHeight - used, window.innerHeight * 0.78));
+      cssH = Math.max(300, Math.min(window.innerHeight - used, window.innerHeight * 0.78));
     } else {
-      cssH = Math.max(320, Math.round(cssW * 0.42));
+      // 桌面端智能填满首屏剩余高度，消除底部多余空白
+      const avail = window.innerHeight - used;
+      cssH = Math.max(360, Math.min(Math.max(avail, Math.round(cssW * 0.44)), Math.round(cssW * 0.56)));
     }
     cv.style.height = cssH + 'px';
     dpr = window.devicePixelRatio || 1;
     cv.width = Math.round(cssW * dpr);
     cv.height = Math.round(cssH * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    // 手机屏是竖屏，与宽幅世界地图比例差很多；按画布比例重算视图，
-    // 这样隐藏上方元素、地图变高时只是看到更多范围，而不是被拉长。
-    if (mobile) fitViewAspect(cssW, cssH);
+    fitViewAspect(cssW, cssH, !userMovedView);
     draw();
   }
 
-  // 一级简化：把 land 要素坐标全部展平为环
   const RINGS = (() => {
     const out = [];
     const push = coords => out.push(coords);
@@ -832,34 +1177,36 @@ const MAP = (() => {
   })();
 
   function drawGraticule(W, H){
+    const p = pal();
     ctx.save();
-    ctx.strokeStyle = 'rgba(60,80,100,.13)';
-    ctx.fillStyle = 'rgba(70,82,94,.8)';
+    ctx.strokeStyle = p.grid;
+    ctx.fillStyle = p.gridText;
     ctx.lineWidth = 1;
     ctx.font = '10px -apple-system,sans-serif';
-    // 经线
     const lonStep = (view.lon1 - view.lon0) > 200 ? 30 : (view.lon1 - view.lon0) > 90 ? 10 : 5;
     for (let lon = -180; lon <= 180; lon += lonStep){
       if (lon < view.lon0 || lon > view.lon1) continue;
       const [x] = proj(lon, 0);
       ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
-      if (W > 500) ctx.fillText(lon+'°', x+3, H-4);
+      if (W > 460 && x < W - 26) ctx.fillText(lon === 0 ? '0°' : (lon > 0 ? lon + '°E' : Math.abs(lon) + '°W'), x + 3, H - 5);
     }
-    // 纬线
     const latStep = (view.lat1 - view.lat0) > 90 ? 30 : (view.lat1 - view.lat0) > 40 ? 10 : 5;
     for (let lat = -90; lat <= 90; lat += latStep){
       if (lat < view.lat0 || lat > view.lat1) continue;
       const [, y] = proj(0, lat);
       ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
-      const label = lat === 0 ? '0°' : (lat>0 ? lat+'°N' : Math.abs(lat)+'°S');
-      if (H > 260) ctx.fillText(label, 4, y-3);
+      const label = lat === 0 ? '0°' : (lat > 0 ? lat + '°N' : Math.abs(lat) + '°S');
+      if (H > 240 && y > 12 && y < H - 14) ctx.fillText(label, 5, y - 3);
     }
     ctx.restore();
   }
 
   function drawLand(W, H){
+    const p = pal();
     ctx.save();
-    ctx.lineWidth = 1.1;
+    ctx.lineWidth = 1;
+    ctx.fillStyle = p.land;
+    ctx.strokeStyle = p.coast;
     for (const ring of RINGS){
       ctx.beginPath();
       let started = false;
@@ -869,9 +1216,7 @@ const MAP = (() => {
         else ctx.lineTo(x, y);
       }
       ctx.closePath();
-      ctx.fillStyle = '#f3f4f6';
       ctx.fill();
-      ctx.strokeStyle = 'rgba(120,132,145,.85)';
       ctx.stroke();
     }
     ctx.restore();
@@ -883,35 +1228,71 @@ const MAP = (() => {
     const m = parseInt(document.getElementById('tm').value,10) || 0;
     const utcHours = h + m/60;
     const rad = x => x*Math.PI/180;
-    // 年内第几天（用当天的真实日期，季节才准确）
     const now = new Date();
     const doy = Math.floor((Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
               - Date.UTC(now.getUTCFullYear(),0,1)) / 86400000) + 1;
-    // 太阳赤纬
     const decl = -23.44 * Math.cos(rad(360/365 * (doy + 10)));
-    // 时差方程（分钟）
     const B = rad(360/365 * (doy - 81));
     const eot = 9.87*Math.sin(2*B) - 7.53*Math.cos(B) - 1.5*Math.sin(B);
-    // 直射点经度：UTC 12:00 时约在 0°经线，时差修正
     let lonS = 15 * (12 - (utcHours + eot/60));
     lonS = ((lonS + 180) % 360 + 360) % 360 - 180;
     return { decl, lonS };
   }
 
-  // 绘制太阳直射点标记（☀）
+  // 绘制实时昼夜分界线（Grayline / Terminator）与夜间区域阴影
+  function drawGrayline(W, H){
+    if (!showGrayline) return;
+    const p = pal();
+    const { decl, lonS } = subSolar();
+    const rad = Math.PI / 180;
+    // 防止春/秋分赤纬接近 0° 时 tan(decl) 除零
+    const safeDecl = Math.abs(decl) < 0.15 ? (decl >= 0 ? 0.15 : -0.15) : decl;
+    const tanDecl = Math.tan(safeDecl * rad);
+    const nightPoleLat = safeDecl > 0 ? -90 : 90;
+
+    const pts = [];
+    for (let lon = -180; lon <= 180; lon += 2){
+      const lat = Math.atan(-Math.cos((lon - lonS) * rad) / tanDecl) / rad;
+      pts.push(proj(lon, lat));
+    }
+
+    ctx.save();
+    // 夜间阴影多边形
+    ctx.beginPath();
+    pts.forEach(([x, y], i) => i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y));
+    const [rx, ry] = proj(180, nightPoleLat);
+    const [lx, ly] = proj(-180, nightPoleLat);
+    ctx.lineTo(rx, ry);
+    ctx.lineTo(lx, ly);
+    ctx.closePath();
+    ctx.fillStyle = p.nightFill;
+    ctx.fill();
+
+    // 晨昏过渡光晕带（Grayline）
+    ctx.beginPath();
+    pts.forEach(([x, y], i) => i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y));
+    ctx.strokeStyle = p.graylineGlow;
+    ctx.lineWidth = 10;
+    ctx.stroke();
+
+    ctx.strokeStyle = p.graylineStroke;
+    ctx.lineWidth = 1.4;
+    ctx.setLineDash([4, 3]);
+    ctx.stroke();
+    ctx.restore();
+  }
+
   function drawSun(){
     const { decl, lonS } = subSolar();
     const [x, y] = proj(lonS, decl);
     const W = cv.width / dpr, H = cv.height / dpr;
     if (x < -24 || x > W+24 || y < -24 || y > H+24) return;
     ctx.save();
-    // 光晕
-    ctx.globalAlpha = 0.35;
+    ctx.globalAlpha = mapTheme === 'dark' ? 0.28 : 0.35;
     ctx.fillStyle = '#ffc93a';
-    ctx.beginPath(); ctx.arc(x, y, 15, 0, Math.PI*2); ctx.fill();
-    // 光芒
+    ctx.beginPath(); ctx.arc(x, y, 16, 0, Math.PI*2); ctx.fill();
     ctx.globalAlpha = 1;
-    ctx.strokeStyle = '#d99a00';
+    ctx.strokeStyle = mapTheme === 'dark' ? '#ffcf4d' : '#d99a00';
     ctx.lineWidth = 2;
     ctx.lineCap = 'round';
     for (let i=0;i<8;i++){
@@ -921,16 +1302,14 @@ const MAP = (() => {
       ctx.lineTo(x + Math.cos(a)*12.5, y + Math.sin(a)*12.5);
       ctx.stroke();
     }
-    // 日面
     ctx.beginPath(); ctx.arc(x, y, 5.2, 0, Math.PI*2);
     ctx.fillStyle = '#ffd54a'; ctx.fill();
     ctx.strokeStyle = '#a8740f'; ctx.lineWidth = 1.2; ctx.stroke();
     ctx.restore();
   }
 
-  // 画一支箭头：从 (x0,y0) 出发，方位角 az 度（0=北，顺时针），屏幕长度 px
   function drawArrow(x0, y0, az, lenPx, color, width, alpha){
-    // 方位角 → 屏幕方向。等距圆柱投影下，东向水平、北向垂直。
+    const p = pal();
     const rad = az * Math.PI / 180;
     const dx = Math.sin(rad) * lenPx;
     const dy = -Math.cos(rad) * lenPx;
@@ -949,12 +1328,11 @@ const MAP = (() => {
     ctx.save();
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-    // 白色描边垫底，让箭头在浅色地图和相互重叠时都能分辨
-    ctx.globalAlpha = 0.9;
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = width + 2.6;
+    ctx.globalAlpha = 0.88;
+    ctx.strokeStyle = p.arrowHalo;
+    ctx.lineWidth = width + 2.4;
     ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
-    ctx.lineWidth = 2.6;
+    ctx.lineWidth = 2.4;
     headPath(); ctx.stroke();
 
     ctx.globalAlpha = alpha;
@@ -962,75 +1340,123 @@ const MAP = (() => {
     ctx.fillStyle = color;
     ctx.lineWidth = width;
     ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
-    headPath(); ctx.fill();   // 箭头尖
+    headPath(); ctx.fill();
     ctx.restore();
     return [x1, y1];
   }
 
   function drawSite(s, W, H){
+    const p = pal();
     const [x, y] = proj(s.lon, s.lat);
-    if (x < -40 || x > W+40 || y < -40 || y > H+40) return;
+    if (x < -40 || x > W+40 || y < -40 || y > H+40){ s._px = null; s._py = null; return; }
 
-    const dpp = degPerPx();               // 屏幕上 1px 对应多少度经度
+    const dpp = degPerPx();
     const latScale = Math.max(0.15, 1 / Math.max(0.25, Math.cos(s.lat*Math.PI/180)));
 
-    // 先画箭头（非全向）
     for (const g of s.groups){
       const lenDeg = powerLen(g.maxPow);
       const lenPx = Math.max(6, (lenDeg / dpp) / latScale);
-      const t = powT(g.maxPow);
-      const width = 1.2 + t * 2.6;
-      const alpha = 0.75 + 0.25 * t;
+      const pt = powT(g.maxPow);
+      const width = 1.2 + pt * 2.5;
+      const alpha = 0.78 + 0.22 * pt;
+      const col = powerColor(g.maxPow);
       if (g.az === 0){
-        // 全向：画圆环（同样先垫白色描边）
         ctx.save();
-        ctx.globalAlpha = 0.9;
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = width + 2.6;
+        ctx.globalAlpha = 0.88;
+        ctx.strokeStyle = p.arrowHalo;
+        ctx.lineWidth = width + 2.4;
         ctx.beginPath(); ctx.arc(x, y, lenPx * 0.6, 0, Math.PI*2); ctx.stroke();
         ctx.globalAlpha = alpha;
-        ctx.strokeStyle = g.color;
+        ctx.strokeStyle = col;
         ctx.lineWidth = width;
         ctx.beginPath(); ctx.arc(x, y, lenPx * 0.6, 0, Math.PI*2); ctx.stroke();
         ctx.restore();
       } else {
-        drawArrow(x, y, g.az, lenPx, g.color, width, alpha);
+        drawArrow(x, y, g.az, lenPx, col, width, alpha);
       }
     }
 
-    // 站点圆点
-    const hot = hoverSite === s;
+    const hot = hoverSite === s || pinnedSite === s;
     ctx.save();
-    if (s.drm){   // 有 DRM 广播的台站：外加一圈紫色描边
+    if (s.drm){
       ctx.beginPath();
       ctx.arc(x, y, hot ? 8.5 : 6.5, 0, Math.PI*2);
-      ctx.lineWidth = 2.4;
-      ctx.strokeStyle = DRM_COLOR;
+      ctx.lineWidth = 2.2;
+      ctx.strokeStyle = p.drmColor;
+      ctx.stroke();
+    }
+    if (pinnedSite === s){
+      ctx.beginPath();
+      ctx.arc(x, y, 11.5, 0, Math.PI*2);
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#58a6ff';
       ctx.stroke();
     }
     ctx.beginPath();
-    ctx.arc(x, y, hot ? 5 : 3, 0, Math.PI*2);
-    ctx.fillStyle = hot ? '#1a7f37' : '#ffffff';
+    ctx.arc(x, y, hot ? 5 : 3.1, 0, Math.PI*2);
+    ctx.fillStyle = hot ? p.siteHotFill : p.siteFill;
     ctx.fill();
     ctx.lineWidth = 1.6;
-    ctx.strokeStyle = hot ? '#ffffff' : '#2b3540';
+    ctx.strokeStyle = hot ? '#ffffff' : p.siteStroke;
     ctx.stroke();
     ctx.restore();
-
-    // 放大时显示台站名
-    if (dpp < 0.35){
-      ctx.save();
-      ctx.globalAlpha = hot ? 1 : 0.8;
-      ctx.fillStyle = hot ? '#1a7f37' : '#3a4652';
-      ctx.font = (hot?'bold ':'') + '10.5px -apple-system,sans-serif';
-      ctx.fillText(tn('site', s.name), x + 6, y - 5);
-      ctx.restore();
-    }
 
     s._px = x; s._py = y;
   }
 
-  // 每帧最多重绘一次：拖动/悬停/缩放时的多次 draw() 请求合并到下一帧
+  // 智能标签碰撞避让：高优先级台站优先展示，绝不叠字
+  function drawLabels(W, H){
+    const dpp = degPerPx();
+    if (dpp > 0.52) return;
+    const p = pal();
+    const candidates = siteGroups.filter(s => s._px != null && s._px > 8 && s._px < W - 40 && s._py > 14 && s._py < H - 8);
+    candidates.sort((a, b) => {
+      const aHot = (a === hoverSite || a === pinnedSite) ? 1 : 0;
+      const bHot = (b === hoverSite || b === pinnedSite) ? 1 : 0;
+      if (aHot !== bHot) return bHot - aHot;
+      if (!!a.drm !== !!b.drm) return b.drm ? 1 : -1;
+      if (b.maxPow !== a.maxPow) return b.maxPow - a.maxPow;
+      return b.entries.length - a.entries.length;
+    });
+
+    const placed = [];
+    const padX = dpp > 0.2 ? 8 : 4;
+    const padY = dpp > 0.2 ? 5 : 2;
+
+    ctx.save();
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = p.labelHalo;
+
+    for (const s of candidates){
+      const hot = s === hoverSite || s === pinnedSite;
+      const label = tn('site', s.name);
+      if (!label) continue;
+      ctx.font = (hot ? '600 11.5px ' : '10.5px ') + '-apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif';
+      const tw = ctx.measureText(label).width;
+      let tx = s._px + 7;
+      // 靠近画布右边缘时自动翻转到站点左侧，避免裁切
+      if (tx + tw > W - 8) tx = Math.max(6, s._px - tw - 7);
+      const ty = s._py - 5;
+      const box = { x0: tx - padX, y0: ty - 11 - padY, x1: tx + tw + padX, y1: ty + 3 + padY };
+
+      if (!hot){
+        let clash = false;
+        for (const b of placed){
+          if (!(box.x1 < b.x0 || box.x0 > b.x1 || box.y1 < b.y0 || box.y0 > b.y1)){ clash = true; break; }
+        }
+        if (clash) continue;
+      }
+      placed.push(box);
+
+      ctx.globalAlpha = hot ? 1 : 0.9;
+      ctx.strokeText(label, tx, ty);
+      ctx.fillStyle = hot ? p.labelHot : p.labelColor;
+      ctx.fillText(label, tx, ty);
+    }
+    ctx.restore();
+  }
+
   let drawPending = false;
   function draw(){
     if (drawPending) return;
@@ -1039,27 +1465,29 @@ const MAP = (() => {
   }
   function drawNow(){
     const W = cv.width / dpr, H = cv.height / dpr;
+    if (!(W > 0 && H > 0)) return;
+    const p = pal();
     ctx.clearRect(0, 0, W, H);
-    ctx.fillStyle = '#dcdfe3';   // 海洋：浅灰
+    ctx.fillStyle = p.ocean;
     ctx.fillRect(0, 0, W, H);
     drawGraticule(W, H);
     drawLand(W, H);
-    // 暗色下让站点箭头更亮：先按功率从小到大画，大的覆盖在上面
+    drawGrayline(W, H);
     const sorted = [...siteGroups].sort((a,b)=>a.maxPow-b.maxPow);
     for (const s of sorted) drawSite(s, W, H);
-    drawSun();      // 太阳直射点标记（在箭头之上）
-    drawProbe();    // 接收点图钉在最上层
+    drawLabels(W, H);
+    drawSun();
+    drawProbe();
   }
 
-  // 根据当前过滤后的行重建站点聚合
   function build(rows){
     const bySite = new Map();
     for (const r of rows){
       if (r.lat == null || r.lon == null) continue;
-      const key = r.loc || '@' + r.site;   // drm.org 新增的台站没有 HFCC 代码，按台站名区分
+      const key = r.loc || '@' + r.site;
       if (!bySite.has(key)){
         bySite.set(key, {
-          loc: r.loc, name: r.site || r.loc, lat: r.lat, lon: r.lon,
+          key, loc: r.loc, name: r.site || r.loc, lat: r.lat, lon: r.lon,
           adm: r.admname || r.adm, entries: [], maxPow: 0,
         });
       }
@@ -1070,7 +1498,6 @@ const MAP = (() => {
       if (p > s.maxPow) s.maxPow = p;
     }
 
-    // 每个站点：按（方位角取整到 10°、频段）聚合
     const groupsOut = [];
     for (const s of bySite.values()){
       const gmap = new Map();
@@ -1081,7 +1508,7 @@ const MAP = (() => {
         const bk = bandName(r.f);
         const key = azKey + '|' + bk;
         const p = parseInt(r.pow,10) || 0;
-        if (!gmap.has(key)) gmap.set(key, {az: azKey, band: bk, color: powerColor(p), maxPow: p, n: 0, freqs: []});
+        if (!gmap.has(key)) gmap.set(key, {az: azKey, band: bk, maxPow: p, n: 0, freqs: []});
         const g = gmap.get(key);
         g.n++; if (p > g.maxPow) g.maxPow = p;
         if (!g.freqs.includes(r.f)) g.freqs.push(r.f);
@@ -1093,7 +1520,17 @@ const MAP = (() => {
     }
     siteGroups = groupsOut;
     lastRows = rows;
-    if (probe && !probeDrag) updateProbe();   // 时间/筛选变化时刷新接收点列表
+    if (pinnedSite){
+      const updated = siteGroups.find(s => s.key === pinnedSite.key);
+      if (updated){
+        pinnedSite = updated;
+        const [px, py] = proj(updated.lon, updated.lat);
+        showTip(updated, px, py, true);
+      } else {
+        hideTip(true);
+      }
+    }
+    if (probe && !probeDrag) updateProbe();
   }
 
   function pickSite(mx, my){
@@ -1106,51 +1543,83 @@ const MAP = (() => {
     return best;
   }
 
-  const BAND_ORDER = f => f;
-
-  function showTip(s, mx, my){
-    const entries = [...s.entries].sort((a,b)=>b.f-a.f);
-    const shown = entries.slice(0, 8);
+  function showTip(s, mx, my, pin){
+    const entries = [...s.entries].sort((a,b)=>a.f-b.f);
+    const shown = pin ? entries.slice(0, 24) : entries.slice(0, 8);
     let rows = `<tr><th>${t('thFreq')}</th><th>${t('thTimeUtc')}</th><th>${t('thLang')}</th><th>${t('thBrc')}</th><th>${t('thPow')}</th><th>${t('thAz')}</th></tr>`;
     for (const r of shown){
-      rows += `<tr><td class="t-freq">${r.f}${drmBadge(r)}</td><td>${timeText(r)}</td>`+
+      rows += `<tr><td class="t-freq" data-copy="${r.f}" title="${t('copyFreqTip', r.f)}">${r.f}${drmBadge(r)}</td><td>${timeText(r)}</td>`+
               `<td>${nmLang(r)}</td><td>${nmBrc(r)}</td>`+
               `<td>${r.pow?r.pow+'kW':''}</td><td>${r.az&&r.az!=='0'?r.az+'°':t('omni')}</td></tr>`;
     }
     if (entries.length > shown.length)
       rows += `<tr><td colspan="6" class="more">${t('tipMore', entries.length-shown.length)}</td></tr>`;
 
-    tip.innerHTML = `<div class="t-site">📡 ${tn('site', s.name)}</div>`+
-      `<div class="t-meta">${s.loc ? s.loc + ' · ' : ''}${tn('country', s.adm)} · ${s.lat.toFixed(1)}°, ${s.lon.toFixed(1)}° · ${t('nRows', entries.length)}</div>`+
-      `<table>${rows}</table>`;
+    tip.innerHTML = `<div class="maptip-head"><div><div class="t-site">📡 ${tn('site', s.name)}</div>`+
+      `<div class="t-meta">${s.loc ? s.loc + ' · ' : ''}${tn('country', s.adm)} · ${s.lat.toFixed(1)}°, ${s.lon.toFixed(1)}° · ${t('nRows', entries.length)}</div></div>`+
+      `<button type="button" class="t-close" title="${t('ppClose')}">✕</button></div>`+
+      `<table>${rows}</table>` +
+      (pin ? '' : `<div class="t-hint">${t('tipPinHint')}</div>`);
+    tip.classList.toggle('pinned', !!pin);
     tip.classList.add('show');
     positionTip(mx, my);
   }
+
+  tip.addEventListener('click', e => {
+    if (e.target.closest('.t-close')){ hideTip(true); return; }
+    const cp = e.target.closest('[data-copy]');
+    if (cp) copyFreq(cp.dataset.copy);
+  });
 
   function positionTip(mx, my){
     const wrap = cv.parentElement;
     const w = tip.offsetWidth, h = tip.offsetHeight;
     let x = mx + 16;
-    if (x + w > wrap.clientWidth - 8) x = mx - w - 16;         // 右侧放不下就翻到左边
-    x = Math.max(8, Math.min(x, wrap.clientWidth - w - 8));    // 再限幅，避免溢出被裁切
+    if (x + w > wrap.clientWidth - 8) x = mx - w - 16;
+    x = Math.max(8, Math.min(x, wrap.clientWidth - w - 8));
     let y = my + 12;
     if (y + h > wrap.clientHeight - 8) y = Math.max(8, my - h - 12);
     tip.style.left = x + 'px';
     tip.style.top = y + 'px';
   }
-  function hideTip(){ tip.classList.remove('show'); hoverSite = null; draw(); }
+  function hideTip(force){
+    if (!force && pinnedSite) return;
+    pinnedSite = null;
+    hoverSite = null;
+    tip.classList.remove('show', 'pinned');
+    draw();
+  }
 
-  // ---- 交互：悬停 / 拖动 / 缩放 ----
+  // 从频率列表定位到地图发射台
+  function focusSite(key){
+    const s = siteGroups.find(x => x.key === key);
+    if (!s) return;
+    userMovedView = true;
+    const W = cv.width / dpr, H = cv.height / dpr;
+    const targetLonSpan = 72;
+    const targetLatSpan = Math.min(120, targetLonSpan / Math.max(0.5, W / H));
+    view.lon0 = s.lon - targetLonSpan / 2;
+    view.lon1 = s.lon + targetLonSpan / 2;
+    view.lat0 = s.lat - targetLatSpan / 2;
+    view.lat1 = s.lat + targetLatSpan / 2;
+    clampView();
+    pinnedSite = s;
+    hoverSite = s;
+    drawNow();
+    const [px, py] = proj(s.lon, s.lat);
+    showTip(s, px, py, true);
+  }
+
+  // ---- 交互：悬停 / 点击固定 / 拖动 / 缩放 ----
   let drag = null;
-  // 接收点状态（逻辑见文件后部“接收点”一节）
+  let downPos = null;
   const probeBtn = document.getElementById('probebtn');
   const probePanel = document.getElementById('probepanel');
-  let probe = null;          // {lat, lon}
+  let probe = null;
   let probeResults = [];
-  let probeDrag = null;      // 拖动图钉时的抓取偏移
-  let lastRows = [];         // 最近一次 build 的过滤结果
+  let probeDrag = null;
+  let lastRows = [];
 
-  // 拖动太阳直射点：左右拖动改变 UTC 小时（0~23，按整点吸附），分钟不变
   let sunDrag = false;
   function hitSun(mx, my){
     const { decl, lonS } = subSolar();
@@ -1161,56 +1630,84 @@ const MAP = (() => {
     const W = cv.width / dpr;
     const lon = view.lon0 + (mx / W) * (view.lon1 - view.lon0);
     const h0 = parseInt(thEl.value,10) || 0, m = parseInt(tmEl.value,10) || 0;
-    // 直射点经度 lonS = 15·(12 − UTC小时 − 时差方程/60)，由当前位置反推时差项，再解出目标小时
     const eotH = 12 - (h0 + m/60) - subSolar().lonS / 15;
     const h = ((Math.round(12 - lon/15 - eotH - m/60) % 24) + 24) % 24;
-    const modeChanged = timeMode !== 'at';   // 拖动太阳时开关自动打到“指定时刻”
+    const modeChanged = timeMode !== 'at';
     if (modeChanged) setTimeMode('at');
-    if (h !== h0) thEl.value = h;
+    if (h !== h0) thEl.value = pad2(h);
     if (modeChanged || h !== h0) render();
   }
 
   function evtPos(e){
     const r = cv.getBoundingClientRect();
-    const t = e.touches ? e.touches[0] : e;
-    return [t.clientX - r.left, t.clientY - r.top];
+    const t0 = e.touches ? e.touches[0] : (e.changedTouches ? e.changedTouches[0] : e);
+    return [t0.clientX - r.left, t0.clientY - r.top];
   }
   cv.addEventListener('mousemove', e => {
     const [mx, my] = evtPos(e);
     if (probeDrag){ moveProbeDrag(mx, my); return; }
     if (sunDrag){ moveSunDrag(mx); return; }
-    cv.classList.toggle('over-sun', !drag && hitSun(mx, my));
+    const onSun = !drag && hitSun(mx, my);
+    cv.classList.toggle('over-sun', onSun);
     if (drag){
-      const W = cv.width/dpr;
-      const dLon = (mx - drag.x) * (view.lon1-view.lon0) / W;
-      const H = cv.height/dpr;
-      const dLat = (my - drag.y) * (view.lat1-view.lat0) / H;
-      view.lon0 -= dLon; view.lon1 -= dLon;
-      view.lat1 += dLat; view.lat0 += dLat;
-      clampView();
-      drag = {x: mx, y: my};
-      hideTip();
+      if (Math.hypot(mx - drag.x, my - drag.y) > 1){
+        userMovedView = true;
+        const W = cv.width/dpr, H = cv.height/dpr;
+        const dLon = (mx - drag.x) * (view.lon1-view.lon0) / W;
+        const dLat = (my - drag.y) * (view.lat1-view.lat0) / H;
+        view.lon0 -= dLon; view.lon1 -= dLon;
+        view.lat1 += dLat; view.lat0 += dLat;
+        clampView();
+        drag = {x: mx, y: my};
+        hideTip(true);
+      }
       return;
     }
-    const s = pickSite(mx, my);
-    if (s){ hoverSite = s; showTip(s, mx, my); draw(); }
-    else if (hoverSite){ hideTip(); }
+    const s = onSun ? null : pickSite(mx, my);
+    cv.classList.toggle('over-site', !!s);
+    if (pinnedSite) return;
+    if (s){ hoverSite = s; showTip(s, mx, my, false); draw(); }
+    else if (hoverSite){ hideTip(false); }
   });
-  cv.addEventListener('mouseleave', hideTip);
+  cv.addEventListener('mouseleave', () => { if (!pinnedSite) hideTip(false); });
   cv.addEventListener('mousedown', e => {
-    const [mx,my]=evtPos(e);
-    if (hitProbe(mx, my)){ startProbeDrag(mx, my); return; }
-    if (hitSun(mx, my)){ sunDrag = true; hideTip(); return; }
-    drag={x:mx,y:my}; cv.classList.add('dragging');
+    const [mx, my] = evtPos(e);
+    downPos = { x: mx, y: my, shift: e.shiftKey };
+    if (e.shiftKey && probe){ setProbeAt(mx, my); hideTip(true); updateProbe(); downPos = null; return; }
+    if (hitProbe(mx, my)){ startProbeDrag(mx, my); downPos = null; return; }
+    if (hitSun(mx, my)){ sunDrag = true; hideTip(true); downPos = null; return; }
+    drag = { x: mx, y: my }; cv.classList.add('dragging');
   });
-  window.addEventListener('mouseup', () => {
-    if (probeDrag) endProbeDrag();
-    sunDrag = false;
+  window.addEventListener('mouseup', e => {
+    if (probeDrag){ endProbeDrag(); downPos = null; return; }
+    if (sunDrag){ sunDrag = false; downPos = null; return; }
+    const wasDown = downPos;
+    downPos = null;
     drag = null; cv.classList.remove('dragging');
+    if (wasDown && e.target === cv){
+      const [mx, my] = evtPos(e);
+      if (Math.hypot(mx - wasDown.x, my - wasDown.y) < 5){
+        const s = pickSite(mx, my);
+        if (s){
+          pinnedSite = s; hoverSite = s;
+          showTip(s, s._px ?? mx, s._py ?? my, true);
+          draw();
+        } else if (pinnedSite){
+          hideTip(true);
+        }
+      }
+    }
+  });
+  window.addEventListener('keydown', e => {
+    if (e.key === 'Escape'){
+      if (pinnedSite) hideTip(true);
+      else if (legendOpen){ legendOpen = false; syncLegend(); }
+    }
   });
 
-  // 触摸：单指拖动，双指捏合缩放（两指中点移动时同时平移）
+  // 触摸：单指拖动/轻点固定详情，双指捏合缩放
   let pinch = null;
+  let touchStartPos = null;
   function pinchState(e){
     const r = cv.getBoundingClientRect();
     const a = e.touches[0], b = e.touches[1];
@@ -1219,12 +1716,13 @@ const MAP = (() => {
   }
   cv.addEventListener('touchstart', e => {
     if (e.touches.length === 1){
-      const [mx,my]=evtPos(e);
-      if (hitProbe(mx, my)){ startProbeDrag(mx, my); drag=null; pinch=null; return; }
-      if (hitSun(mx, my)){ sunDrag = true; hideTip(); drag=null; pinch=null; return; }
+      const [mx,my] = evtPos(e);
+      touchStartPos = { x: mx, y: my };
+      if (hitProbe(mx, my)){ startProbeDrag(mx, my); drag=null; pinch=null; touchStartPos=null; return; }
+      if (hitSun(mx, my)){ sunDrag = true; hideTip(true); drag=null; pinch=null; touchStartPos=null; return; }
       drag={x:mx,y:my}; pinch=null;
     }
-    else if (e.touches.length === 2){ drag=null; pinch=pinchState(e); }
+    else if (e.touches.length === 2){ drag=null; touchStartPos=null; pinch=pinchState(e); }
   }, {passive:true});
   cv.addEventListener('touchmove', e => {
     if (probeDrag && e.touches.length===1){
@@ -1235,30 +1733,42 @@ const MAP = (() => {
       moveSunDrag(evtPos(e)[0]);
     } else if (pinch && e.touches.length===2){
       e.preventDefault();
+      userMovedView = true;
       const p = pinchState(e);
       if (p.d > 0 && pinch.d > 0){
         const W=cv.width/dpr, H=cv.height/dpr;
         const dLon=(p.x-pinch.x)*(view.lon1-view.lon0)/W;
         const dLat=(p.y-pinch.y)*(view.lat1-view.lat0)/H;
         view.lon0-=dLon; view.lon1-=dLon; view.lat1+=dLat; view.lat0+=dLat;
-        zoom(pinch.d / p.d, p.x, p.y);   // 手指张开 → 放大
+        zoom(pinch.d / p.d, p.x, p.y);
       }
       pinch = p;
     } else if (drag && e.touches.length===1){
       e.preventDefault();
       const [mx,my]=evtPos(e);
-      const W=cv.width/dpr, H=cv.height/dpr;
-      const dLon=(mx-drag.x)*(view.lon1-view.lon0)/W;
-      const dLat=(my-drag.y)*(view.lat1-view.lat0)/H;
-      view.lon0-=dLon; view.lon1-=dLon; view.lat1+=dLat; view.lat0+=dLat;
-      clampView(); drag={x:mx,y:my}; hideTip();
+      if (Math.hypot(mx - drag.x, my - drag.y) > 2){
+        userMovedView = true;
+        const W=cv.width/dpr, H=cv.height/dpr;
+        const dLon=(mx-drag.x)*(view.lon1-view.lon0)/W;
+        const dLat=(my-drag.y)*(view.lat1-view.lat0)/H;
+        view.lon0-=dLon; view.lon1-=dLon; view.lat1+=dLat; view.lat0+=dLat;
+        clampView(); drag={x:mx,y:my}; hideTip(true);
+      }
     }
   }, {passive:false});
   function touchEnd(e){
-    if (probeDrag){ endProbeDrag(); drag = null; pinch = null; return; }
-    if (sunDrag){ sunDrag = false; drag = null; pinch = null; return; }
+    if (probeDrag){ endProbeDrag(); drag = null; pinch = null; touchStartPos = null; return; }
+    if (sunDrag){ sunDrag = false; drag = null; pinch = null; touchStartPos = null; return; }
+    if (touchStartPos && e.touches.length === 0 && e.changedTouches.length === 1){
+      const [mx, my] = evtPos(e);
+      if (Math.hypot(mx - touchStartPos.x, my - touchStartPos.y) < 8){
+        const s = pickSite(mx, my);
+        if (s){ pinnedSite = s; hoverSite = s; showTip(s, s._px ?? mx, s._py ?? my, true); draw(); }
+        else if (pinnedSite) hideTip(true);
+      }
+    }
+    touchStartPos = null;
     pinch = null;
-    // 双指抬起一指后，用剩下的手指继续拖动，避免画面跳动
     if (e.touches.length === 1){ const [mx,my]=evtPos(e); drag={x:mx,y:my}; } else drag=null;
   }
   cv.addEventListener('touchend', touchEnd);
@@ -1266,18 +1776,17 @@ const MAP = (() => {
 
   function clampView(){
     const lonSpan = Math.min(360, view.lon1 - view.lon0);
-    const latSpan = Math.min(160, view.lat1 - view.lat0);
-    // 限幅经度在 -180..180
+    const latSpan = Math.min(170, view.lat1 - view.lat0);
     if (view.lon0 < -180){ view.lon1 += -180-view.lon0; view.lon0 = -180; }
     if (view.lon1 > 180){ view.lon0 -= view.lon1-180; view.lon1 = 180; }
     view.lon0 = Math.max(-180, Math.min(180-lonSpan, view.lon0));
     view.lon1 = view.lon0 + lonSpan;
-    // 纬度 -85..85
     view.lat0 = Math.max(-85, Math.min(85-latSpan, view.lat0));
     view.lat1 = view.lat0 + latSpan;
   }
 
   function zoom(factor, cx, cy){
+    userMovedView = true;
     const W = cv.width/dpr, H = cv.height/dpr;
     cx = cx == null ? W/2 : cx; cy = cy == null ? H/2 : cy;
     const lonAt = view.lon0 + (cx/W)*(view.lon1-view.lon0);
@@ -1289,7 +1798,7 @@ const MAP = (() => {
     const rx = (cx/W), ry = (cy/H);
     view.lon0 = lonAt - rx*lonSpan; view.lon1 = view.lon0 + lonSpan;
     view.lat1 = latAt + ry*latSpan; view.lat0 = view.lat1 - latSpan;
-    clampView(); hideTip();
+    clampView(); hideTip(true);
   }
 
   cv.addEventListener('wheel', e => {
@@ -1298,41 +1807,62 @@ const MAP = (() => {
     zoom(e.deltaY > 0 ? 1.18 : 0.85, mx, my);
   }, {passive:false});
 
+  // 地图右上角按钮绑定
+  zoomInBtn.addEventListener('click', () => zoom(0.72));
+  zoomOutBtn.addEventListener('click', () => zoom(1.38));
+  zoomResetBtn.addEventListener('click', resetView);
+  graylineBtn.addEventListener('click', () => {
+    showGrayline = !showGrayline;
+    graylineBtn.classList.toggle('active', showGrayline);
+    draw();
+  });
+  function setTheme(theme){
+    mapTheme = theme === 'dark' ? 'dark' : 'light';
+    if (legendOpen) renderLegend();
+    draw();
+  }
+  function syncLegend(){
+    legend.hidden = !legendOpen;
+    legendBtn.classList.toggle('active', legendOpen);
+    if (legendOpen) renderLegend();
+  }
+  legendBtn.addEventListener('click', () => { legendOpen = !legendOpen; syncLegend(); });
 
   function renderLegend(){
-    let h = '<div style="color:var(--text);font-weight:600;margin-bottom:6px">图例</div>';
-    h += '<div class="row"><svg width="34" height="12"><line x1="1" y1="6" x2="24" y2="6" stroke="#8b98a5" stroke-width="2"/><polygon points="24,1 34,6 24,11" fill="#8b98a5"/></svg> 箭头=发射方位角</div>';
-    h += '<div class="row"><svg width="34" height="12"><line x1="1" y1="6" x2="14" y2="6" stroke="#8b98a5" stroke-width="1.4"/><line x1="1" y1="6" x2="30" y2="6" stroke="#e6edf3" stroke-width="3.4"/></svg> 长度/颜色=功率</div>';
-    h += '<div class="row"><svg width="34" height="12"><circle cx="17" cy="6" r="5" fill="none" stroke="#8b98a5" stroke-width="1.5"/></svg> 圆环=全向(0°)</div>';
-    h += '<div class="row"><span style="width:16px;height:14px;display:inline-flex;align-items:center;justify-content:center;color:#ffd54a;font-size:14px">☀</span> 太阳直射点（按 UTC 时间）</div>';
-    h += '<div style="margin:7px 0 3px;color:var(--text)">颜色=发射功率</div>';
-    h += '<div style="height:12px;border-radius:3px;margin:2px 0 4px;background:linear-gradient(90deg,hsl(0,80%,60%),hsl(60,80%,60%),hsl(120,80%,60%),hsl(180,80%,60%),hsl(240,80%,60%),hsl(280,80%,60%))\"></div>';
-    h += '<div style="position:relative;height:14px;font-size:10.5px;color:var(--muted)">'
-       + '<span style="position:absolute;left:0">≤100</span>'
-       + '<span style="position:absolute;left:27%;transform:translateX(-50%)">250</span>'
-       + '<span style="position:absolute;left:60%;transform:translateX(-50%)">500</span>'
-       + '<span style="position:absolute;right:0">800 kW</span></div>';
-    h += '<div class="hint">颜色/长度：100 kW 以下统一按 100 的一半显示；100–800 kW 按实际功率线性比例。<br>☀ 为当前 UTC 时间的太阳直射点，改变上方时间即可看到它移动；用 ☀ 按钮开关。<br>箭头旁数字为发射频率(kHz)，用 Hz 按钮开关。<br>滚轮/双指缩放，拖动平移，悬停查看台站全部频率。</div>';
+    const l = pal().arrowLightness;
+    const sunCol = mapTheme === 'dark' ? '#ffd54a' : '#d98a00';
+    let h = `<div class="maplegend-head"><span>${t('legTitle')}</span><button type="button" id="legclose" title="${t('ppClose')}">✕</button></div>`;
+    h += `<div class="row"><svg width="30" height="12"><line x1="1" y1="6" x2="21" y2="6" stroke="currentColor" stroke-width="2"/><polygon points="21,2 30,6 21,10" fill="currentColor"/></svg> ${t('legArrow')}</div>`;
+    h += `<div class="row"><svg width="30" height="12"><circle cx="15" cy="6" r="4.5" fill="none" stroke="currentColor" stroke-width="1.6"/></svg> ${t('legOmni')}</div>`;
+    h += `<div class="row"><svg width="30" height="12"><circle cx="15" cy="6" r="5" fill="none" stroke="${pal().drmColor}" stroke-width="2"/><circle cx="15" cy="6" r="2.2" fill="${pal().siteFill}" stroke="${pal().siteStroke}" stroke-width="1"/></svg> ${t('legDrm')}</div>`;
+    h += `<div class="row"><span style="width:30px;text-align:center;color:${sunCol};font-size:13px">☀</span> ${t('legSun')}</div>`;
+    h += `<div class="row"><svg width="30" height="12"><rect x="1" y="2" width="14" height="8" rx="1" fill="rgba(217,138,0,.18)"/><rect x="15" y="2" width="14" height="8" rx="1" fill="${pal().nightFill}"/><line x1="15" y1="1" x2="15" y2="11" stroke="${pal().graylineStroke}" stroke-width="1.5" stroke-dasharray="2,2"/></svg> ${t('legGray')}</div>`;
+    h += `<div style="margin:7px 0 3px;color:var(--text);font-size:11px">${t('legLen')}</div>`;
+    h += `<div style="height:10px;border-radius:3px;margin:2px 0 3px;background:linear-gradient(90deg,hsl(0,85%,${l}%),hsl(60,85%,${l}%),hsl(120,85%,${l}%),hsl(180,85%,${l}%),hsl(240,85%,${l}%),hsl(280,85%,${l}%))"></div>`;
+    h += `<div style="position:relative;height:14px;font-size:10px;color:var(--muted)">`
+       + `<span style="position:absolute;left:0">≤100</span>`
+       + `<span style="position:absolute;left:27%;transform:translateX(-50%)">250</span>`
+       + `<span style="position:absolute;left:60%;transform:translateX(-50%)">500</span>`
+       + `<span style="position:absolute;right:0">800 kW</span></div>`;
+    h += `<div class="hint">${t('legHint')}</div>`;
     legend.innerHTML = h;
+    const cl = legend.querySelector('#legclose');
+    if (cl) cl.onclick = () => { legendOpen = false; syncLegend(); };
   }
 
   /* ============================================================
-     接收点：把 📻 拖到地图上，估算该点能收到的广播并按强弱排序
-     粗略模型（仅供参考）：自由空间场强 + 天线方向增益 − 每跳损耗
-                         − 白天 D 层吸收（低频）− 超过 MUF 的损耗（夜间高频）
+     接收点：拖动 📻 / 点击城市预设 / 浏览器定位
      ============================================================ */
   const RAD = Math.PI / 180;
-  const LEVELS = [   // 估算场强（dBμV/m）下限 → 等级；color 用于深色面板，line 用于浅色地图上的连线
-    { min: 54, n: 5, name: '极强', color: '#3fb950', line: '#1a7f37' },
-    { min: 44, n: 4, name: '强',   color: '#9be36b', line: '#4d8a1c' },
-    { min: 34, n: 3, name: '良好', color: '#d2c022', line: '#9a7d00' },
-    { min: 24, n: 2, name: '一般', color: '#f0883e', line: '#c4560e' },
-    { min: 14, n: 1, name: '微弱', color: '#8b98a5', line: '#5c6773' },
+  const LEVELS = [
+    { min: 54, n: 5, name: '极强', color: '#3fb950', line: '#1a7f37', lineDark: '#3fb950' },
+    { min: 44, n: 4, name: '强',   color: '#9be36b', line: '#4d8a1c', lineDark: '#8ce65c' },
+    { min: 34, n: 3, name: '良好', color: '#d2c022', line: '#9a7d00', lineDark: '#e3cc32' },
+    { min: 24, n: 2, name: '一般', color: '#f0883e', line: '#c4560e', lineDark: '#f0883e' },
+    { min: 14, n: 1, name: '微弱', color: '#8b98a5', line: '#5c6773', lineDark: '#8b98a5' },
   ];
-  // 接收点在天线主瓣 ±45° 内时，加大功率和距离两项的权重（以 100 kW、3000 km 为基准放大差异）
   const BEAM_HALF = 45, BEAM_WEIGHT = 1.5, P_REF = 100, D_REF = 3000;
 
-  // 大圆距离（km）、从发射台出发的方位角、路径中点
   function pathGeom(lat1, lon1, lat2, lon2){
     const p1 = lat1*RAD, p2 = lat2*RAD, dl = (lon2-lon1)*RAD;
     const a = Math.sin((p2-p1)/2)**2 + Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;
@@ -1345,34 +1875,29 @@ const MAP = (() => {
     return { dist, brg, mlat, mlon };
   }
 
-  const EIBI_POW = 50;   // EiBi 记录没有功率，接收点估算时按 50 kW 计（面板中标“*”）
+  const EIBI_POW = 50;
   function estimateField(r, lat, lon, sun){
     const p = parseFloat(r.pow) || (r.src === 'EiBi' ? EIBI_POW : NaN);
     if (!(p > 0) || r.lat == null || r.lon == null) return null;
     const g = pathGeom(r.lat, r.lon, lat, lon);
     const d = Math.max(g.dist, 50);
     const az = parseInt(r.az, 10) || 0;
-    let gain, w = 1;   // w：功率/距离项的权重
-    if (az === 0) gain = 2;   // 全向（无主瓣方向，不加权）
+    let gain, w = 1;
+    if (az === 0) gain = 2;
     else {
-      const off = Math.abs(((g.brg - az) % 360 + 540) % 360 - 180);   // 偏离天线主瓣的角度 0..180
+      const off = Math.abs(((g.brg - az) % 360 + 540) % 360 - 180);
       gain = Math.max(-8, 15 - 12 * (off / 30) ** 2);
       if (off <= BEAM_HALF) w = BEAM_WEIGHT;
     }
     const fMHz = r.f / 1000;
     const hops = Math.max(1, Math.ceil(d / 3500));
-    // 路径中点 h 小时前的太阳天顶角余弦（太阳每小时西移 15°）：>0 为白天
     const coszAgo = h => Math.max(0, Math.sin(g.mlat*RAD)*Math.sin(sun.decl*RAD)
       + Math.cos(g.mlat*RAD)*Math.cos(sun.decl*RAD)*Math.cos((g.mlon - sun.lonS - 15*h)*RAD));
     const cosz = coszAgo(0);
-    // D 层吸收随日落几乎立即消失，用当前太阳高度
     const absorb = Math.min(60, hops * 30 * cosz * (5 / fMHz) ** 2);
-    // F2 层（决定 MUF）日落后要几个小时才衰减：取过去 4 小时内日照的衰减最大值，
-    // 避免一过日落 MUF 就骤降到夜间值、把傍晚仍可用的高频全部判为收不到
     const ion = Math.max(cosz, 0.85*coszAgo(1), 0.7*coszAgo(2), 0.55*coszAgo(3), 0.4*coszAgo(4));
-    const muf = 10 + 18 * ion;   // 深夜约 10 MHz，正午约 28 MHz
+    const muf = 10 + 18 * ion;
     const mufLoss = fMHz > muf ? Math.min(40, 30 * (fMHz / muf - 1)) : 0;
-    // w = 1 时与原式 104.8 + 10·log10(p) − 20·log10(d) 完全相同；w > 1 放大相对于基准的差异
     const powTerm  = 10*Math.log10(P_REF) + w * 10*Math.log10(p / P_REF);
     const distTerm = 20*Math.log10(D_REF) + w * 20*Math.log10(d / D_REF);
     const E = 104.8 + powTerm + gain - distTerm - 10 - hops*6 - absorb - mufLoss;
@@ -1380,6 +1905,7 @@ const MAP = (() => {
   }
 
   function updateProbe(){
+    probeBtn.classList.toggle('active', !!probe);
     if (!probe){ probePanel.hidden = true; return; }
     const curMin = (parseInt(thEl.value,10)||0)*60 + (parseInt(tmEl.value,10)||0);
     const dow = nowUTC().dow;
@@ -1399,8 +1925,6 @@ const MAP = (() => {
   function fmtLatLon(lat, lon){
     return `${Math.abs(lat).toFixed(1)}°${lat>=0?'N':'S'}, ${Math.abs(lon).toFixed(1)}°${lon>=0?'E':'W'}`;
   }
-  // 接收列表：每行一个电台，第一列电台名（及国家），第二列按频率递增紧凑列出该台此刻可收的全部频率；
-  // 字体表示强度：强/极强=粗体，良好=常规，一般/微弱=斜体。行按该台最强信号排序。
   let lastPanelHtml = '';
   function renderProbePanel(curMin){
     const groups = new Map();
@@ -1409,13 +1933,16 @@ const MAP = (() => {
       if (!groups.has(k)) groups.set(k, { r: x.r, best: x.E, freqs: new Map() });
       const g = groups.get(k);
       const old = g.freqs.get(x.r.f);
-      if (!old || x.E > old.E) g.freqs.set(x.r.f, x);   // 同一频率只保留最强的一条
+      if (!old || x.E > old.E) g.freqs.set(x.r.f, x);
     }
     const rows = [...groups.values()].sort((a, b) => b.best - a.best);
-    let h = `<div class="pp-head"><div><div class="pp-title">📻 ${fmtLatLon(probe.lat, probe.lon)}</div>`+
+    const presets = `<div class="pp-presets"><button type="button" class="geo" data-probe-geo="1">${t('ppGeo')}</button>` +
+      PROBE_CITIES.map((c, idx) => `<button type="button" data-probe-city="${idx}">${c[UI]}</button>`).join('') +
+      `</div>`;
+    let h = `<div class="pp-head"><div><div class="pp-title">📻 ${probe.label ? probe.label + ' · ' : ''}${fmtLatLon(probe.lat, probe.lon)}</div>`+
       `<div class="pp-meta">${t('ppMeta', toHM(curMin), probeResults.length, rows.length)}</div>`+
       `<div class="pp-key">${t('ppKey')}</div></div>`+
-      `<button class="pp-close" title="${t('ppClose')}">✕</button></div>`;
+      `<button type="button" class="pp-close" title="${t('ppClose')}">✕</button></div>${presets}`;
     if (!rows.length){
       h += `<div class="pp-empty">${t('ppEmpty')}</div>`;
     } else {
@@ -1423,16 +1950,15 @@ const MAP = (() => {
       for (const g of rows){
         const fs = [...g.freqs.values()].sort((a, b) => a.r.f - b.r.f).map(({ r, lv, dist }) => {
           const cls = lv.n >= 4 ? 'pp-s' : lv.n <= 2 ? 'pp-w' : '';
-          const tip = t('ppFreqTip', r.f, nmLang(r), timeText(r), `${nmSite(r)}, ${nmCountry(r)}`,
+          const tipTxt = t('ppFreqTip', r.f, nmLang(r), timeText(r), `${nmSite(r)}, ${nmCountry(r)}`,
                         Math.round(dist).toLocaleString(), t('levels')[lv.n - 1]) + (r.src === 'EiBi' ? ' · ' + t('ppEibi') : '');
-          return `<span class="${cls}" title="${tip.replace(/"/g, '&quot;')}">${r.f}${r.drm ? '<sup class="pp-drm">DRM</sup>' : ''}${r.src === 'EiBi' ? '*' : ''}</span>`;
+          return `<span class="${cls}" data-copy="${r.f}" title="${tipTxt.replace(/"/g, '&quot;')}">${r.f}${r.drm ? '<sup class="pp-drm">DRM</sup>' : ''}${r.src === 'EiBi' ? '*' : ''}</span>`;
         }).join(' ');
         h += `<tr><td class="pp-b">${nmBrc(g.r)}<small>${nmCountry(g.r)}</small></td><td class="pp-fs">${fs}</td></tr>`;
       }
       h += '</table></div>';
     }
     h += `<div class="pp-note">${t('ppNote')}</div>`;
-    // 自动刷新时内容没变就不重绘；变了则保留列表滚动位置（否则浏览到下面时会被拉回首行）
     if (h === lastPanelHtml && !probePanel.hidden) return;
     lastPanelHtml = h;
     const top = probePanel.querySelector('.pp-list')?.scrollTop || 0;
@@ -1440,11 +1966,28 @@ const MAP = (() => {
     const list = probePanel.querySelector('.pp-list');
     if (list) list.scrollTop = top;
     probePanel.hidden = false;
-    probePanel.querySelector('.pp-close').onclick = clearProbe;
   }
-  function clearProbe(){ probe = null; probeResults = []; probePanel.hidden = true; draw(); }
+  probePanel.addEventListener('click', e => {
+    if (e.target.closest('.pp-close')){ clearProbe(); return; }
+    const cp = e.target.closest('[data-copy]');
+    if (cp){ copyFreq(cp.dataset.copy); return; }
+    const cityBtn = e.target.closest('[data-probe-city]');
+    if (cityBtn){
+      const c = PROBE_CITIES[Number(cityBtn.dataset.probeCity)];
+      if (c){ probe = { lat: c.lat, lon: c.lon, label: c[UI] }; updateProbe(); }
+      return;
+    }
+    if (e.target.closest('[data-probe-geo]')){
+      if (!navigator.geolocation){ showToast(t('ppGeoDenied')); return; }
+      navigator.geolocation.getCurrentPosition(
+        pos => { probe = { lat: pos.coords.latitude, lon: pos.coords.longitude }; updateProbe(); },
+        () => showToast(t('ppGeoDenied')),
+        { timeout: 6000 }
+      );
+    }
+  });
+  function clearProbe(){ probe = null; probeResults = []; probePanel.hidden = true; probeBtn.classList.remove('active'); draw(); }
 
-  // 画布坐标 → 经纬度
   function setProbeAt(mx, my){
     const W = cv.width/dpr, H = cv.height/dpr;
     probe = { lon: view.lon0 + (mx/W)*(view.lon1-view.lon0), lat: view.lat1 - (my/H)*(view.lat1-view.lat0) };
@@ -1456,8 +1999,8 @@ const MAP = (() => {
   }
   function startProbeDrag(mx, my){
     const [px, py] = proj(probe.lon, probe.lat);
-    probeDrag = { dx: px - mx, dy: py - my };   // 记住抓取点与针尖的偏移，拖动时不跳
-    hideTip();
+    probeDrag = { dx: px - mx, dy: py - my };
+    hideTip(true);
   }
   function moveProbeDrag(mx, my){ setProbeAt(mx + probeDrag.dx, my + probeDrag.dy); draw(); }
   function endProbeDrag(){ probeDrag = null; updateProbe(); }
@@ -1466,17 +2009,17 @@ const MAP = (() => {
     if (!probe) return;
     const [px, py] = proj(probe.lon, probe.lat);
     ctx.save();
-    if (!probeDrag){   // 连线到最强的 5 个发射台
-      ctx.lineWidth = 1.6; ctx.setLineDash([5, 4]); ctx.globalAlpha = 0.8;
+    if (!probeDrag){
+      ctx.lineWidth = 1.7; ctx.setLineDash([5, 4]); ctx.globalAlpha = 0.85;
       for (const {r, lv} of probeResults.slice(0, 5)){
         const [sx, sy] = proj(r.lon, r.lat);
-        ctx.strokeStyle = lv.line;
+        ctx.strokeStyle = mapTheme === 'dark' ? lv.lineDark : lv.line;
         ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(px, py); ctx.stroke();
       }
       ctx.setLineDash([]); ctx.globalAlpha = 1;
     }
-    // 图钉：圆头 + 针尖指向接收点
-    ctx.fillStyle = '#58a6ff'; ctx.strokeStyle = '#0f1419'; ctx.lineWidth = 2;
+    ctx.fillStyle = mapTheme === 'dark' ? '#58a6ff' : '#0969da';
+    ctx.strokeStyle = pal().pinStroke; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.arc(px, py - 20, 12, Math.PI*0.75, Math.PI*2.25); ctx.lineTo(px, py); ctx.closePath();
     ctx.fill(); ctx.stroke();
     ctx.font = '13px -apple-system,"Apple Color Emoji","Segoe UI Emoji",sans-serif';
@@ -1485,7 +2028,6 @@ const MAP = (() => {
     ctx.restore();
   }
 
-  // 从右上角按钮拖出 📻（鼠标和触摸统一用 pointer 事件）；只是点一下则放到地图中央
   probeBtn.addEventListener('pointerdown', e => {
     e.preventDefault();
     const ghost = document.createElement('div');
@@ -1505,10 +2047,15 @@ const MAP = (() => {
       ghost.remove();
       if (ev.type === 'pointercancel') return;
       const b = cv.getBoundingClientRect();
-      if (!moved) setProbeAt(b.width/2, b.height/2);
-      else if (document.elementFromPoint(ev.clientX, ev.clientY) === cv) setProbeAt(ev.clientX - b.left, ev.clientY - b.top);
-      else return;   // 没放到地图上
-      hideTip(); updateProbe();
+      if (!moved){
+        if (probe) { clearProbe(); return; }
+        // 默认放到北京/当前视图中心，避免落在大西洋 0°,0° 的空白海面
+        const c = PROBE_CITIES[0];
+        probe = { lat: c.lat, lon: c.lon, label: c[UI] };
+      } else if (document.elementFromPoint(ev.clientX, ev.clientY) === cv){
+        setProbeAt(ev.clientX - b.left, ev.clientY - b.top);
+      } else return;
+      hideTip(true); updateProbe();
     };
     move(e);
     window.addEventListener('pointermove', move);
@@ -1517,15 +2064,41 @@ const MAP = (() => {
   });
 
   return {
-    build, draw, resize, renderLegend,
+    build, draw, resize, renderLegend, focusSite, resetView, setTheme,
     get siteGroups(){ return siteGroups; },
     get probeResults(){ return probeResults; },
-    refreshProbe(){ if (probe) renderProbePanel((parseInt(thEl.value,10)||0)*60 + (parseInt(tmEl.value,10)||0)); },
+    refreshProbe(){
+      if (legendOpen) renderLegend();
+      if (probe){
+        const matched = PROBE_CITIES.find(c => Math.abs(c.lat - probe.lat) < 0.05 && Math.abs(c.lon - probe.lon) < 0.05);
+        if (matched) probe.label = matched[UI];
+        renderProbePanel((parseInt(thEl.value,10)||0)*60 + (parseInt(tmEl.value,10)||0));
+      }
+    },
   };
 })();
 
+// ---- 整站浅色/深色主题统一管理（默认浅色） ----
+const themeBtn = document.getElementById('themebtn');
+let siteTheme = (() => {
+  try { const v = localStorage.getItem('hf.theme'); if (v === 'dark' || v === 'light') return v; } catch {}
+  return 'light';
+})();
+function applySiteTheme(){
+  const dark = siteTheme === 'dark';
+  document.body.classList.toggle('theme-dark', dark);
+  themeBtn.textContent = dark ? '☀️' : '🌙';
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.content = dark ? '#0d1117' : '#f6f8fa';
+  MAP.setTheme(siteTheme);
+}
+themeBtn.addEventListener('click', () => {
+  siteTheme = siteTheme === 'dark' ? 'light' : 'dark';
+  try { localStorage.setItem('hf.theme', siteTheme); } catch {}
+  applySiteTheme();
+});
+
 // ---- init ----
-// 界面语言切换：静态文字、语言下拉、列表/地图/接收点面板全部按新语言重绘
 const uiLangBtn = document.getElementById('uilang');
 uiLangBtn.addEventListener('click', () => {
   UI = UI === 'zh' ? 'en' : 'zh';
@@ -1535,11 +2108,12 @@ uiLangBtn.addEventListener('click', () => {
 
 function init(){
   applyStatic();
+  applySiteTheme();
   const n = nowUTC();
-  if (thEl.value==='' || thEl.value==null) thEl.value = n.h;
-  if (tmEl.value==='' || tmEl.value==null) tmEl.value = n.m;
+  if (thEl.value==='' || thEl.value==null) thEl.value = pad2(n.h);
+  if (tmEl.value==='' || tmEl.value==null) tmEl.value = pad2(n.m);
   setTimeMode('now');
-  showTab(true);   // 默认进入地图视图（内部会 resize + render）
+  showTab(true);
 }
 init();
 </script>
